@@ -1,0 +1,14 @@
+﻿{
+  "extensions": {
+    "Keyfactor.Orchestrators.Extensions.IOrchestratorJobExtension": {
+      "CertStores.Fortigate.Inventory": {
+        "assemblypath": "Fortigate.dll",
+        "TypeFullName": "Keyfactor.Extensions.Orchestrator.Fortigate.Inventory"
+      },
+      "CertStores.Fortigate.Management": {
+        "assemblypath": "Fortigate.dll",
+        "TypeFullName": "Keyfactor.Extensions.Orchestrator.Fortigate.Management"
+      }
+    }
+  }
+}

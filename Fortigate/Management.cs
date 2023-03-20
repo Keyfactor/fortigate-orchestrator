@@ -43,9 +43,9 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         {
             ILogger logger = LogHandler.GetClassLogger(this.GetType());
             logger.LogDebug($"Begin {config.Capability} for job id {config.JobId}...");
-            logger.LogDebug($"Store Path: {config.CertificateStoreDetails.StorePath}");
+            logger.LogDebug($"Client Machine: {config.CertificateStoreDetails.ClientMachine}");
 
-            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.StorePath, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword));
+            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword));
 
             try
             {
@@ -53,7 +53,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 switch (config.OperationType)
                 {
                     case CertStoreOperationType.Add:
-                        logger.LogDebug($"BEGIN add operation for {config.CertificateStoreDetails.StorePath}, alias {config.JobCertificate.Alias}.");
+                        logger.LogDebug($"BEGIN add operation for {config.CertificateStoreDetails.ClientMachine}, alias {config.JobCertificate.Alias}.");
                         byte[] pfxBytes = Convert.FromBase64String(config.JobCertificate.Contents);
                         (byte[] certPem, byte[] privateKey) = GetPemFromPFX(pfxBytes, config.JobCertificate.PrivateKeyPassword.ToCharArray());
 
@@ -61,7 +61,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                         break;
                     case CertStoreOperationType.Remove:
                         //delete will fail if certificate is in use
-                        logger.LogDebug($"BEGIN remove operation for {config.CertificateStoreDetails.StorePath}, alias {config.JobCertificate.Alias}.");
+                        logger.LogDebug($"BEGIN remove operation for {config.CertificateStoreDetails.ClientMachine}, alias {config.JobCertificate.Alias}.");
                         store.Delete(config.JobCertificate.Alias);
                         break;
                     default:
@@ -72,7 +72,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             catch (Exception ex)
             {
                 logger.LogError($"Exception for {config.Capability}: {FortigateException.FlattenExceptionMessages(ex, string.Empty)} for job id {config.JobId}");
-                return new JobResult() { Result = OrchestratorJobStatusJobResult.Failure, JobHistoryId = config.JobHistoryId, FailureMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.StorePath}:") };
+                return new JobResult() { Result = OrchestratorJobStatusJobResult.Failure, JobHistoryId = config.JobHistoryId, FailureMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.ClientMachine}:") };
             }
 
             logger.LogDebug($"...End {config.Capability} job for job id {config.JobId}");

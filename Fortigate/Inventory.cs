@@ -37,9 +37,9 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         {
             ILogger logger = LogHandler.GetClassLogger(this.GetType());
             logger.LogDebug($"Begin {config.Capability} for job id {config.JobId}...");
-            logger.LogDebug($"Store Path: {config.CertificateStoreDetails.StorePath}");
+            logger.LogDebug($"Client Machine: {config.CertificateStoreDetails.ClientMachine}");
 
-            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.StorePath, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword));
+            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword));
 
             List<CurrentInventoryItem> inventoryItems = new List<CurrentInventoryItem>();
 
@@ -50,7 +50,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             catch (Exception ex)
             {
                 logger.LogError($"Exception for {config.Capability}: {FortigateException.FlattenExceptionMessages(ex, string.Empty)} for job id {config.JobId}");
-                return new JobResult() { Result = OrchestratorJobStatusJobResult.Failure, JobHistoryId = config.JobHistoryId, FailureMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.StorePath}") };
+                return new JobResult() { Result = OrchestratorJobStatusJobResult.Failure, JobHistoryId = config.JobHistoryId, FailureMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.ClientMachine}") };
             }
 
             try
@@ -62,7 +62,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
             catch (Exception ex)
             {
-                string errorMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.StorePath}: ");
+                string errorMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.ClientMachine}: ");
                 logger.LogError($"Exception returning certificates for {config.Capability}: {errorMessage} for job id {config.JobId}");
                 return new JobResult() { Result = OrchestratorJobStatusJobResult.Failure, JobHistoryId = config.JobHistoryId, FailureMessage = errorMessage };
             }
