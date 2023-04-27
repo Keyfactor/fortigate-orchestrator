@@ -57,4 +57,12 @@ Below are the values you need to enter if you choose to manually create the Fort
 None
 
 *Entry Parameters:*
-None
+None  
+
+## Certificate Store Setup  
+
+Please refer to the Keyfactor Command Reference Guide for information on creating certificate stores in Keyfactor Command.  However, there are a few fields that are important to highlight here:
+- Category - Select "Fortigate" or whatever ShortName you chose for the store type.  
+- Client Machine - The IP address or DNS for your Fortigate server.  
+- Store Path - This is not used in this integration, but is a required field in the UI.  Just enter any value here.  
+- Password - Click the button here and enter the Fortigate API Token you previously set up (See Fortigate Setup earlier in this README).
