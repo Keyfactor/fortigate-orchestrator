@@ -32,6 +32,7 @@ using System.Net.Http.Headers;
 using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
+using System.Reflection.Metadata;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -211,17 +212,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.MethodExit(LogLevel.Debug);
         }
 
-        private void Update(cmdb_certificate_resource cert)
-        {
-            logger = LogHandler.GetClassLogger(this.GetType());
-
-            var parameters = new Dictionary<String, String>();
-            var result = PutAsJson(update_certificate_api + cert.certname, cert, parameters);
-            logger.LogDebug(result);
-
-            logger.MethodExit(LogLevel.Debug);
-        }
-
         private void Insert(string alias, string cert, string privateKey, string password = null)
         {
             logger = LogHandler.GetClassLogger(this.GetType());
@@ -299,14 +289,15 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             parameters.Add("type", type);
 
             var response = client.GetAsync(GetUrl(download_certificate, parameters)).GetAwaiter().GetResult();
-            response.EnsureSuccessStatusCode();
             var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            if (!response.IsSuccessStatusCode)
+                throw new Exception($"Error retrieving certificate {mkey}: {content}");
 
             logger.MethodExit(LogLevel.Debug);
             return content;
         }
 
-        private String PostAsJson(string endpoint, Object obj, Dictionary<String, String> additionalParams = null)
+        private String PostAsJson(string endpoint, cmdb_certificate_resource obj, Dictionary<String, String> additionalParams = null)
         {
             logger = LogHandler.GetClassLogger(this.GetType());
 
@@ -321,7 +312,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 logger.LogDebug("response message received");
                 content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 logger.LogDebug("Ensuring status code..");
-                responseMessage.EnsureSuccessStatusCode();
+                if (!responseMessage.IsSuccessStatusCode)
+                    throw new Exception($"Error adding certificate {obj.certname}: {content}");
 
                 logger.MethodExit(LogLevel.Debug);
                 return responseMessage.StatusCode.ToString();
@@ -340,8 +332,9 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             try
             {
                 HttpResponseMessage responseMessage = client.DeleteAsync(GetUrl(endpoint, additionalParams)).GetAwaiter().GetResult();
-                responseMessage.EnsureSuccessStatusCode();
-                var c = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult(); ;
+                string content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (!responseMessage.IsSuccessStatusCode)
+                    throw new Exception($"Error removing certificate: {content}");
 
                 logger.MethodExit(LogLevel.Debug);
                 return responseMessage.StatusCode.ToString();
@@ -363,7 +356,9 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
                 HttpResponseMessage responseMessage = client.PutAsync(GetUrl(endpoint, additionalParams), stringContent).GetAwaiter().GetResult();
-                responseMessage.EnsureSuccessStatusCode();
+                string content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (!responseMessage.IsSuccessStatusCode)
+                    throw new Exception(content);
 
                 logger.MethodExit(LogLevel.Debug);
                 return responseMessage.StatusCode.ToString();

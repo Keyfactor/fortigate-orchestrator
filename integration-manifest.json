@@ -2,10 +2,10 @@
   "$schema": "https://keyfactor.github.io/integration-manifest-schema.json",
   "integration_type": "orchestrator",
   "name": "Fortigate",
-  "status": "pilot",
+  "status": "production",
   "description": "This integration is used to inventory and manage certificates in Fortigate.",
   "link_github": false,
-  "support_level": "kf-supported",
+  "support_level": "community",
   "update_catalog": false,
   "about": {
     "orchestrator": {
@@ -26,6 +26,32 @@
         "supportsManagementRemove": true,
         "supportsReenrollment": false,
         "supportsInventory": true
+      },
+      "store_types": {
+        "Fortigate": {
+          "Name": "Fortigate",
+          "ShortName": "Fortigate",
+          "Capability": "Fortigate",
+          "ServerRequired": false,
+          "BlueprintAllowed": true,
+          "CustomAliasAllowed": "Required",
+          "PowerShell": false,
+          "PrivateKeyAllowed": "Required",
+          "SupportedOperations": {
+            "Add": true,
+            "Create": false,
+            "Discovery": true,
+            "Enrollment": false,
+            "Remove": true
+          },
+          "PasswordOptions": {
+            "Style": "Default",
+            "EntrySupported": false,
+            "StoreRequired": true
+          },
+          "Properties": [],
+          "EntryParameters": []
+        }
       }
     }
   }
