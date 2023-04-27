@@ -105,7 +105,7 @@ The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 1. The renewal or removal of certificates enrolled through the internal Fortigate CA
 2. The renewal or removal of factory certificates
 3. The renewal or removal of ANY certificate bound to a Fortigate object
-4. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation use case)
+4. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation" use case)
 
 ## Fortigate Version Supported  
 
