@@ -2,7 +2,7 @@
 
 This integration is used to inventory and manage certificates in Fortigate.
 
-#### Integration status: Pilot - Ready for use in test environments. Not for use in production.
+#### Integration status: Production - Ready for use in production environments.
 
 ## About the Keyfactor Universal Orchestrator Extension
 
@@ -102,9 +102,10 @@ The Fortigate Orchestrator Extension supports the following use cases:
 4. Ability to delete **unbound** local user certificates
 
 The Fortigate Orchestrator Extension DOES NOT support the following use cases:
-1. The renewal or removal of certificates enrolled through the internal Fortigate CA.
+1. The renewal or removal of certificates enrolled through the internal Fortigate CA
 2. The renewal or removal of factory certificates
 3. The renewal or removal of ANY certificate bound to a Fortigate object
+4. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation use case)
 
 ## Fortigate Version Supported  
 
