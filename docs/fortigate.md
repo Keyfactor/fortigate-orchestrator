@@ -101,8 +101,8 @@ The following table describes the required and optional fields for the `Fortigat
 | --------- | ----------- | ------------------------- |
 | Category | Select "Fortigate" or the customized certificate store name from the previous step. | |
 | Container | Optional container to associate certificate store with. | |
-| Client Machine | For the Client Machine field, enter the IP address or DNS name of your Fortigate server. Example: '192.168.1.1' or 'fortigate.domain.com'. | |
-| Store Path | For the Store Path field, enter any value as it is not used in this integration. Example: 'NotApplicable'. | |
+| Client Machine | The IP address or DNS name of the Fortigate server. For example, '192.168.1.1' or 'fortigate.example.com'. | |
+| Store Path | Any arbitrary value, as the Store Path field is not used in the Fortigate integration. For example, 'defaultStorePath'. | |
 | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. | |
 
 * **Using kfutil**

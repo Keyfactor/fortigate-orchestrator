@@ -1,9 +1,9 @@
 {
-    "$schema": "/Users/hroszell/coding/dev/staff-tools/keyfactor.github.io/v2/integration-manifest-schema.json",
+    "$schema": "https://keyfactor.github.io/v2/integration-manifest-schema.json",
     "integration_type": "orchestrator",
     "name": "Fortigate",
     "status": "production",
-    "description": "This integration is used to inventory and manage certificates in Fortigate.",
+    "description": "The Fortigate Universal Orchestrator extension enables remote management of cryptographic certificates on Fortigate devices, including inventory, addition, and removal of certificates.",
     "link_github": true,
     "support_level": "kf-supported",
     "update_catalog": true,
@@ -11,22 +11,6 @@
         "orchestrator": {
             "UOFramework": "10.1",
             "pam_support": true,
-            "win": {
-                "supportsCreateStore": false,
-                "supportsDiscovery": false,
-                "supportsManagementAdd": true,
-                "supportsManagementRemove": true,
-                "supportsReenrollment": false,
-                "supportsInventory": true
-            },
-            "linux": {
-                "supportsCreateStore": false,
-                "supportsDiscovery": false,
-                "supportsManagementAdd": true,
-                "supportsManagementRemove": true,
-                "supportsReenrollment": false,
-                "supportsInventory": true
-            },
             "store_types": [
                 {
                     "Name": "Fortigate",
@@ -51,8 +35,8 @@
                     },
                     "Properties": [],
                     "EntryParameters": [],
-                    "ClientMachineDescription": "For the Client Machine field, enter the IP address or DNS name of your Fortigate server. Example: '192.168.1.1' or 'fortigate.domain.com'.",
-                    "StorePathDescription": "For the Store Path field, enter any value as it is not used in this integration. Example: 'NotApplicable'."
+                    "ClientMachineDescription": "The IP address or DNS name of the Fortigate server. For example, '192.168.1.1' or 'fortigate.example.com'.",
+                    "StorePathDescription": "Any arbitrary value, as the Store Path field is not used in the Fortigate integration. For example, 'defaultStorePath'."
                 }
             ]
         }
