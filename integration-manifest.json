@@ -44,6 +44,7 @@
             "ClientMachineDescription": "The IP address or DNS of the Fortigate server",
             "StorePathDescription": "This is not used in this integration, but is a required field in the UI. Just enter any value here"
           }
+        }
       ]
     }
   }
