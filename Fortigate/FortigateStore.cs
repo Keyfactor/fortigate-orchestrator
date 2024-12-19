@@ -33,6 +33,7 @@ using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
 using System.Reflection.Metadata;
+using System.Linq.Expressions;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -40,7 +41,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
     {
         private ILogger logger { get; set; }
         private string FortigateHost { get; set; }
-        private string AccessToken { get; set; }
 
 
         private static readonly string available_certificates = "/api/v2/monitor/system/available-certificates";
@@ -59,12 +59,12 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
         private static readonly string cert_usage_api = "/api/v2/monitor/system/object/usage";
 
-        static readonly HttpClientHandler handler = new HttpClientHandler()
+        private readonly HttpClientHandler handler = new HttpClientHandler()
         {
             ClientCertificateOptions = ClientCertificateOption.Manual,
             ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => { return true; }
         };
-        static readonly HttpClient client = new HttpClient(handler);
+        private readonly HttpClient client;
 
         public FortigateStore(string fortigateHost, string accessToken)
         {
@@ -72,24 +72,35 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             logger.MethodEntry(LogLevel.Debug);
 
+            client = new HttpClient(handler);
             FortigateHost = fortigateHost;
-            AccessToken = accessToken;
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
 
             logger.MethodExit(LogLevel.Debug);
         }
 
         public void Delete(string alias)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
-            var result = DeleteResource(delete_certificate_api + alias);
-
-            logger.MethodExit(LogLevel.Debug);
+            try
+            {
+                DeleteResource(delete_certificate_api + alias);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error deleting certificate {alias}: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         public bool Exists(string alias)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             try
             {
@@ -106,12 +117,11 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             {
                 logger.MethodExit(LogLevel.Debug);
             }
-
         }
 
         public void UpdateUsage(string alias, string path, string name, string attribute)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             var attributeValue = new Dictionary<String, String>();
             attributeValue.Add("q_origin_key", alias);
@@ -122,99 +132,130 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             var parameters = new Dictionary<String, String>();
             parameters.Add("vdom", "root");
-            var result = PutAsJson(endpoint, main, parameters);
-            logger.LogDebug(result);
 
-            logger.MethodExit(LogLevel.Debug);
+            try
+            {
+                PutAsJson(endpoint, main, parameters);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error updating usage for {alias}: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         public Usage Usage(string alias)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
             parameters.Add("vdom", "root");
             parameters.Add("scope", "global");
             parameters.Add("mkey", alias);
             parameters.Add("qtypes", "[160]");
-            var result = GetResource(cert_usage_api, parameters);
-            var response = JsonConvert.DeserializeObject<FortigateResponse<Usage>>(result);
 
-            logger.MethodExit(LogLevel.Debug);
-            return response.results;
+            try
+            {
+                var result = GetResource(cert_usage_api, parameters);
+                var response = JsonConvert.DeserializeObject<FortigateResponse<Usage>>(result);
+                return response.results;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error checking usage for {alias}: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         public void Insert(string alias, string cert, string privateKey, bool overwrite, string password = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
-            if (overwrite)
+            try
             {
-                var tmpAlias = alias + "_kftmp";
-                var existing = Exists(alias);
-                var tmpExisting = Exists(tmpAlias);
-
-                //if there is an existing record
-                if (existing)
+                if (overwrite)
                 {
-                    //check to see if it's in use
-                    var existingUsage = Usage(alias);
+                    var tmpAlias = alias + "_kftmp";
+                    var existing = Exists(alias);
+                    var tmpExisting = Exists(tmpAlias);
 
-                    //if it's currently in use
-                    if (existingUsage.currently_using.Length > 0)
+                    //if there is an existing record
+                    if (existing)
                     {
-                        //if we don't have a tmp create a temp
-                        if (!tmpExisting)
-                        {
-                            //create tmp
-                            Insert(tmpAlias, cert, privateKey);
+                        //check to see if it's in use
+                        var existingUsage = Usage(alias);
 
-                            tmpExisting = true;
+                        //if it's currently in use
+                        if (existingUsage.currently_using.Length > 0)
+                        {
+                            //if we don't have a tmp create a temp
+                            if (!tmpExisting)
+                            {
+                                //create tmp
+                                Insert(tmpAlias, cert, privateKey);
+
+                                tmpExisting = true;
+                            }
+
+                            foreach (var existingUsing in existingUsage.currently_using)
+                            {
+                                UpdateUsage(tmpAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
+                            }
                         }
 
-                        foreach (var existingUsing in existingUsage.currently_using)
-                        {
-                            UpdateUsage(tmpAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
-                        }
+                        logger.LogDebug("Deleting alias:" + alias);
+                        Delete(alias);
                     }
 
-                    logger.LogDebug("Deleting alias:" + alias);
-                    Delete(alias);
-                }
+                    logger.LogDebug("Inserting alias:" + alias);
+                    Insert(alias, cert, privateKey, password);
 
-                logger.LogDebug("Inserting alias:" + alias);
-                Insert(alias, cert, privateKey, password);
-
-                //if we have an existing temp record
-                if (tmpExisting)
-                {
-                    //check to see if it has any binds
-                    var tmpUsage = Usage(tmpAlias);
-                    if (tmpUsage.currently_using.Length > 0)
+                    //if we have an existing temp record
+                    if (tmpExisting)
                     {
-                        //transfer binds back to original
-                        foreach (var tmpUsing in tmpUsage.currently_using)
+                        //check to see if it has any binds
+                        var tmpUsage = Usage(tmpAlias);
+                        if (tmpUsage.currently_using.Length > 0)
                         {
-                            UpdateUsage(alias, tmpUsing.path, tmpUsing.name, tmpUsing.attribute);
+                            //transfer binds back to original
+                            foreach (var tmpUsing in tmpUsage.currently_using)
+                            {
+                                UpdateUsage(alias, tmpUsing.path, tmpUsing.name, tmpUsing.attribute);
+                            }
                         }
+                        logger.LogDebug("Deleting alias:" + tmpExisting);
+                        Delete(tmpAlias);
                     }
-                    logger.LogDebug("Deleting alias:" + tmpExisting);
-                    Delete(tmpAlias);
+                }
+                else
+                {
+                    //no overwrite so we just try to insert
+                    logger.LogDebug("Inserting certificate with alias: " + alias);
+                    Insert(alias, cert, privateKey, password);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                //no overwrite so we just try to insert
-                logger.LogDebug("Inserting certificate with alias: " + alias);
-                Insert(alias, cert, privateKey, password);
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error inserting/replacing certificate {alias}: "));
+                throw;
             }
-
-            logger.MethodExit(LogLevel.Debug);
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         private void Insert(string alias, string cert, string privateKey, string password = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             var cert_resource = new cmdb_certificate_resource()
             {
@@ -226,108 +267,126 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 type = "regular"
             };
 
-            logger.LogDebug(alias);
-            logger.LogDebug("key_file_content:" + privateKey);
-            logger.LogDebug("file_content:" + cert);
-            
-            Insert(cert_resource);
-
-            logger.MethodExit(LogLevel.Debug);
-        }
-
-        private void Insert(cmdb_certificate_resource cert)
-        {
-            logger = LogHandler.GetClassLogger(this.GetType());
-
             var parameters = new Dictionary<String, String>();
             parameters.Add("vdom", "root");
-            var result = PostAsJson(import_certificate_api, cert, parameters);
-            logger.LogDebug(result);
-
-            logger.MethodExit(LogLevel.Debug);
+            try
+            {
+                PostAsJson(import_certificate_api, cert_resource, parameters);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error inserting certificate {alias}: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         public List<CurrentInventoryItem> List()
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             List<CurrentInventoryItem> items = new List<CurrentInventoryItem>();
 
-            var result = GetResource(available_certificates);
-            var response = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result);
+            try
+            { 
+                var result = GetResource(available_certificates);
+                var response = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result);
 
-            foreach( var cert in response.results)
-            {
-                if (cert.type == "local-cer")
+                foreach( var cert in response.results)
                 {
-                    var certFile = DownloadFileAsString(cert.name, cert.type);
-
-                    var item = new CurrentInventoryItem()
+                    if (cert.type == "local-cer")
                     {
-                        Alias = cert.name,
-                        Certificates = new string[] { certFile },
-                        ItemStatus = OrchestratorInventoryItemStatus.Unknown,
-                        PrivateKeyEntry = true,
-                        UseChainLevel = false
-                    };
+                        var certFile = DownloadFileAsString(cert.name, cert.type);
 
-                    items.Add(item);
+                        var item = new CurrentInventoryItem()
+                        {
+                            Alias = cert.name,
+                            Certificates = new string[] { certFile },
+                            ItemStatus = OrchestratorInventoryItemStatus.Unknown,
+                            PrivateKeyEntry = true,
+                            UseChainLevel = false
+                        };
+
+                        items.Add(item);
+                    }
                 }
+
+                return items;
             }
-
-            logger.MethodExit(LogLevel.Debug);
-
-            return items;
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error retrieving certificate list: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         private string DownloadFileAsString(string mkey, string type)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
             parameters.Add("mkey", mkey);
             parameters.Add("type", type);
 
-            var response = client.GetAsync(GetUrl(download_certificate, parameters)).GetAwaiter().GetResult();
-            var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            if (!response.IsSuccessStatusCode)
-                throw new Exception($"Error retrieving certificate {mkey}: {content}");
+            try
+            {
+                var response = client.GetAsync(GetUrl(download_certificate, parameters)).GetAwaiter().GetResult();
+                var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                    throw new Exception($"Error retrieving certificate {mkey}: {content}");
 
-            logger.MethodExit(LogLevel.Debug);
-            return content;
+                return content;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error retrieving downloading file {mkey}: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
         }
 
         private String PostAsJson(string endpoint, cmdb_certificate_resource obj, Dictionary<String, String> additionalParams = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             string content = "";
+            var url = GetUrl(endpoint, additionalParams);
+            var stringContent = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
+            stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
             try
             {
-                var url = GetUrl(endpoint, additionalParams);
-                logger.LogDebug("postAsJson to url:" + url);
-                var stringContent = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
-                stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 HttpResponseMessage responseMessage = client.PostAsync(url, stringContent).GetAwaiter().GetResult();
-                logger.LogDebug("response message received");
                 content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                logger.LogDebug("Ensuring status code..");
                 if (!responseMessage.IsSuccessStatusCode)
                     throw new Exception($"Error adding certificate {obj.certname}: {content}");
 
-                logger.MethodExit(LogLevel.Debug);
                 return responseMessage.StatusCode.ToString();
             }
-            catch (HttpRequestException e)
+            catch (HttpRequestException ex)
             {
-                logger.LogError("Error performing post resource: " + e.Message);
-                throw e;
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error performing POST: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
             }
         }
 
-        private String DeleteResource(string endpoint, Dictionary<String, String> additionalParams = null)
+        private void DeleteResource(string endpoint, Dictionary<String, String> additionalParams = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             try
             {
@@ -335,56 +394,56 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 string content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (!responseMessage.IsSuccessStatusCode)
                     throw new Exception($"Error removing certificate: {content}");
-
-                logger.MethodExit(LogLevel.Debug);
-                return responseMessage.StatusCode.ToString();
             }
-            catch (HttpRequestException e)
+            catch (HttpRequestException ex)
             {
-                logger.LogError("Error performing deleting resource: " + e.Message);
-                throw e;
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error performing DELETE: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
             }
         }
 
-        private String PutAsJson(string endpoint, Object obj, Dictionary<String, String> additionalParams = null)
+        private void PutAsJson(string endpoint, Object obj, Dictionary<String, String> additionalParams = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
+
+            var stringContent = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
+            stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
             try
             {
-                var stringContent = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
-                stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
                 HttpResponseMessage responseMessage = client.PutAsync(GetUrl(endpoint, additionalParams), stringContent).GetAwaiter().GetResult();
                 string content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (!responseMessage.IsSuccessStatusCode)
                     throw new Exception(content);
-
-                logger.MethodExit(LogLevel.Debug);
-                return responseMessage.StatusCode.ToString();
             }
-            catch (HttpRequestException e)
+            catch (HttpRequestException ex)
             {
-                logger.LogError("Error performing put resource: " + e.Message);
-                throw e;
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error performing PUT: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
             }
         }
 
         private String GetUrl(string endpoint, Dictionary<String, String> additionalParams = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
+            logger.MethodExit(LogLevel.Debug);
 
             return AddQueryParams("https://" + FortigateHost + endpoint, additionalParams);
-
-            logger.MethodExit(LogLevel.Debug);
         }
 
         private String AddQueryParams(string endpoint, Dictionary<String, String> additionalParams = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
-            parameters.Add("access_token", AccessToken);
             if (additionalParams != null)
             {
                 foreach (var additionalParam in additionalParams)
@@ -393,36 +452,28 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 }
             }
 
-            try
-            {
-                var queryString = endpoint + "?" + string.Join("&", parameters.Select(kvp => $"{HttpUtility.UrlEncode(kvp.Key)}={HttpUtility.UrlEncode(kvp.Value)}"));
+            var queryString = endpoint + "?" + string.Join("&", parameters.Select(kvp => $"{HttpUtility.UrlEncode(kvp.Key)}={HttpUtility.UrlEncode(kvp.Value)}"));
+            logger.MethodExit(LogLevel.Debug);
 
-                logger.LogDebug("QueryString:" + queryString);
-
-                logger.MethodExit(LogLevel.Debug);
-                return queryString;
-            } 
-            catch (Exception e)
-            {
-                logger.LogDebug("Exception occured while creating query string", e);
-                throw e;
-            }
+            return queryString;
         }
 
         private string GetResource(string endpoint, Dictionary<String, String> additionalParams = null)
         {
-            logger = LogHandler.GetClassLogger(this.GetType());
+            logger.MethodEntry(LogLevel.Debug);
 
             try
             {
-                logger.MethodExit(LogLevel.Debug);
-
                 return client.GetStringAsync(GetUrl(endpoint, additionalParams)).GetAwaiter().GetResult();
             }
-            catch(HttpRequestException e)
+            catch(HttpRequestException ex)
             {
-                logger.LogError("Error performing get resource: " + e.Message);
-                throw e;
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error performing get resource: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
             }
         }
     }
