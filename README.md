@@ -88,7 +88,7 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
     | Capability | Fortigate | Store type name orchestrator will register with. Check the box to allow entry of value |
     | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
     | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
-    | Supports Discovery | ✅ Checked | Check the box. Indicates that the Store Type supports Discovery |
+    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
     | Supports Reenrollment | 🔲 Unchecked |  Indicates that the Store Type supports Reenrollment |
     | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
     | Needs Server | 🔲 Unchecked | Determines if a target server name is required when creating store |
