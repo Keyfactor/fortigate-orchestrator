@@ -41,7 +41,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
     {
         private ILogger logger { get; set; }
         private string FortigateHost { get; set; }
-        private string AccessToken { get; set; }
 
 
         private static readonly string available_certificates = "/api/v2/monitor/system/available-certificates";
@@ -60,12 +59,12 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
         private static readonly string cert_usage_api = "/api/v2/monitor/system/object/usage";
 
-        static readonly HttpClientHandler handler = new HttpClientHandler()
+        private readonly HttpClientHandler handler = new HttpClientHandler()
         {
             ClientCertificateOptions = ClientCertificateOption.Manual,
             ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, certChain, policyErrors) => { return true; }
         };
-        static readonly HttpClient client = new HttpClient(handler);
+        private readonly HttpClient client;
 
         public FortigateStore(string fortigateHost, string accessToken)
         {
@@ -73,8 +72,9 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             logger.MethodEntry(LogLevel.Debug);
 
+            client = new HttpClient(handler);
             FortigateHost = fortigateHost;
-            AccessToken = accessToken;
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
 
             logger.MethodExit(LogLevel.Debug);
         }
@@ -444,7 +444,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
-            parameters.Add("access_token", AccessToken);
             if (additionalParams != null)
             {
                 foreach (var additionalParam in additionalParams)
