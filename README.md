@@ -190,8 +190,8 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
         | --------- | ----------- |
         | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
         | Container | Optional container to associate certificate store with. |
-        | Client Machine |  |
-        | Store Path |  |
+        | Client Machine | The IP address or DNS of the Fortigate server |
+        | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
         | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
         | Store Password | Enter the Fortigate API Token here |
 
@@ -228,8 +228,8 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
         | --------- | ----------- |
         | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
         | Container | Optional container to associate certificate store with. |
-        | Client Machine |  |
-        | Store Path |  |
+        | Client Machine | The IP address or DNS of the Fortigate server |
+        | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
         | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
         | Store Password | Enter the Fortigate API Token here |
 
