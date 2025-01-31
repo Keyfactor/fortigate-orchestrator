@@ -32,6 +32,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
     {
         public IPAMSecretResolver _resolver;
         public string ExtensionName => string.Empty;
+        
+        ILogger logger;
 
         public Management(IPAMSecretResolver resolver)
         {
@@ -41,7 +43,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         //Job Entry Point
         public JobResult ProcessJob(ManagementJobConfiguration config)
         {
-            ILogger logger = LogHandler.GetClassLogger(this.GetType());
+            logger = LogHandler.GetClassLogger(this.GetType());
+
             logger.LogDebug($"Begin {config.Capability} for job id {config.JobId}...");
             logger.LogDebug($"Client Machine: {config.CertificateStoreDetails.ClientMachine}");
 
@@ -81,6 +84,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
         private (byte[], byte[]) GetPemFromPFX(byte[] pfxBytes, char[] pfxPassword)
         {
+            logger.MethodEntry(LogLevel.Debug);
+
             Pkcs12StoreBuilder storeBuilder = new Pkcs12StoreBuilder();
             Pkcs12Store p = storeBuilder.Build();
             p.Load(new MemoryStream(pfxBytes), pfxPassword);
@@ -108,6 +113,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             Func<String, String> pemify = null;
             pemify = (ss => ss.Length <= 64 ? ss : ss.Substring(0, 64) + "\n" + pemify(ss.Substring(64)));
             String certPem = certStart + pemify(Convert.ToBase64String(p.GetCertificate(alias).Certificate.GetEncoded())) + certEnd;
+
+            logger.MethodExit(LogLevel.Debug);
             return (Encoding.ASCII.GetBytes(certPem), Encoding.ASCII.GetBytes(privateKeyString));
         }
     }
