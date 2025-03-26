@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
 using System.Reflection.Metadata;
 using System.Linq.Expressions;
+using Org.BouncyCastle.Security;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -98,27 +99,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public bool Exists(string alias)
-        {
-            logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                var result = GetResource(get_certificate_api + alias);
-                var response = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result);
-
-                return (response.results != null && response.results.Length > 0);
-            } 
-            catch(Exception)
-            {
-                return false;
-            }
-            finally
-            {
-                logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
         public void UpdateUsage(string alias, string path, string name, string attribute)
         {
             logger.MethodEntry(LogLevel.Debug);
@@ -148,7 +128,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public Usage Usage(string alias)
+        public Usage Usage(string alias, int qtype)
         {
             logger.MethodEntry(LogLevel.Debug);
 
@@ -156,7 +136,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             parameters.Add("vdom", "root");
             parameters.Add("scope", "global");
             parameters.Add("mkey", alias);
-            parameters.Add("qtypes", "[160]");
+            parameters.Add("qtypes", $"[{qtype.ToString()}]");
 
             try
             {
@@ -184,30 +164,37 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 if (overwrite)
                 {
                     var tmpAlias = alias + "_kftmp";
-                    var existing = Exists(alias);
-                    var tmpExisting = Exists(tmpAlias);
+                    Certificate[] byAlias = List(alias);
+                    Certificate[] byTmpAlias = List(tmpAlias);
+                    Usage existingUsage = null;
 
                     //if there is an existing record
-                    if (existing)
+                    if (byAlias.Length > 0)
                     {
+                        Certificate certItem = byAlias[0];
+
                         //check to see if it's in use
-                        var existingUsage = Usage(alias);
+                        existingUsage = Usage(alias, certItem.q_type);
 
                         //if it's currently in use
                         if (existingUsage.currently_using.Length > 0)
                         {
-                            //if we don't have a tmp create a temp
-                            if (!tmpExisting)
+                            //if tmpAlias exists, end with error
+                            if (byTmpAlias.Length > 0)
                             {
-                                //create tmp
-                                Insert(tmpAlias, cert, privateKey);
-
-                                tmpExisting = true;
+                                throw new Exception($"Error inserting certificate {alias}.  Temporary alias {tmpAlias} already exists, so certificate {alias} that is bound to one or more objects, cannot be replaced and rebound.  Please remove {tmpAlias}, and try again.");        
                             }
 
-                            foreach (var existingUsing in existingUsage.currently_using)
+                            //create tmpAlias entry
+                            Insert(tmpAlias, cert, privateKey);
+                            byTmpAlias = List(tmpAlias);
+
+                            if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
                             {
-                                UpdateUsage(tmpAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
+                                foreach (var existingUsing in existingUsage.currently_using)
+                                {
+                                    UpdateUsage(tmpAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
+                                }
                             }
                         }
 
@@ -218,20 +205,20 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                     logger.LogDebug("Inserting alias:" + alias);
                     Insert(alias, cert, privateKey, password);
 
-                    //if we have an existing temp record
-                    if (tmpExisting)
+                    if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
                     {
-                        //check to see if it has any binds
-                        var tmpUsage = Usage(tmpAlias);
-                        if (tmpUsage.currently_using.Length > 0)
+                        //transfer binds back to original
+                        foreach (var existingUsageItem in existingUsage.currently_using)
                         {
-                            //transfer binds back to original
-                            foreach (var tmpUsing in tmpUsage.currently_using)
-                            {
-                                UpdateUsage(alias, tmpUsing.path, tmpUsing.name, tmpUsing.attribute);
-                            }
+                            logger.LogDebug($"Update binding for {existingUsageItem.name}");
+                            UpdateUsage(alias, existingUsageItem.path, existingUsageItem.name, existingUsageItem.attribute);
                         }
-                        logger.LogDebug("Deleting alias:" + tmpExisting);
+                    }
+
+                    //if we have an existing temp record, remove it
+                    if (byTmpAlias.Length > 0)
+                    {
+                        logger.LogDebug("Deleting temp alias:" + tmpAlias);
                         Delete(tmpAlias);
                     }
                 }
@@ -284,37 +271,17 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public List<CurrentInventoryItem> List()
+        public Certificate[] List(string mkey)
         {
             logger.MethodEntry(LogLevel.Debug);
 
             List<CurrentInventoryItem> items = new List<CurrentInventoryItem>();
 
             try
-            { 
-                var result = GetResource(available_certificates);
-                var response = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result);
-
-                foreach( var cert in response.results)
-                {
-                    if (cert.type == "local-cer")
-                    {
-                        var certFile = DownloadFileAsString(cert.name, cert.type);
-
-                        var item = new CurrentInventoryItem()
-                        {
-                            Alias = cert.name,
-                            Certificates = new string[] { certFile },
-                            ItemStatus = OrchestratorInventoryItemStatus.Unknown,
-                            PrivateKeyEntry = true,
-                            UseChainLevel = false
-                        };
-
-                        items.Add(item);
-                    }
-                }
-
-                return items;
+            {
+                string endpoint = string.IsNullOrEmpty(mkey) ? available_certificates : available_certificates + "?mkey=" + mkey;
+                var result = GetResource(endpoint);
+                return JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
             }
             catch (Exception ex)
             {
@@ -327,7 +294,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        private string DownloadFileAsString(string mkey, string type)
+        public string DownloadFileAsString(string mkey, string type)
         {
             logger.MethodEntry(LogLevel.Debug);
 
