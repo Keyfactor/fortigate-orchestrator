@@ -35,6 +35,8 @@ using Keyfactor.Orchestrators.Common.Enums;
 using System.Reflection.Metadata;
 using System.Linq.Expressions;
 using Org.BouncyCastle.Security;
+using System.Reflection.Metadata.Ecma335;
+using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -161,11 +163,12 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
+                Certificate[] byAlias = List(alias);
+
                 if (overwrite)
                 {
-                    var tmpAlias = alias + "_kftmp";
-                    Certificate[] byAlias = List(alias);
-                    Certificate[] byTmpAlias = List(tmpAlias);
+                    var newAlias = CreateNewAlias(alias);
+                    Certificate[] byNewAlias = List(newAlias);
                     Usage existingUsage = null;
 
                     //if there is an existing record
@@ -177,55 +180,46 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                         existingUsage = Usage(alias, certItem.q_type);
 
                         //if it's currently in use
-                        if (existingUsage.currently_using.Length > 0)
+                        if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
                         {
-                            //if tmpAlias exists, end with error
-                            if (byTmpAlias.Length > 0)
+                            //if newAlias exists, end with error
+                            if (byNewAlias.Length > 0)
                             {
-                                throw new Exception($"Error inserting certificate {alias}.  Temporary alias {tmpAlias} already exists, so certificate {alias} that is bound to one or more objects, cannot be replaced and rebound.  Please remove {tmpAlias}, and try again.");        
+                                throw new Exception($"Error inserting certificate {alias}.  New alias {newAlias} already exists, so certificate {alias} that is bound to one or more objects, cannot be replaced and rebound.  Please remove {newAlias}, and try again.");        
                             }
 
-                            //create tmpAlias entry
-                            Insert(tmpAlias, cert, privateKey);
-                            byTmpAlias = List(tmpAlias);
+                            //create newAlias entry
+                            logger.LogDebug("Inserting alias:" + newAlias);
+                            Insert(newAlias, cert, privateKey, password);
 
-                            if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
+                            foreach (var existingUsing in existingUsage.currently_using)
                             {
-                                foreach (var existingUsing in existingUsage.currently_using)
-                                {
-                                    UpdateUsage(tmpAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
-                                }
+                                UpdateUsage(newAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
                             }
+
+                            logger.LogDebug("Deleting alias:" + alias);
+                            Delete(alias);
                         }
 
                         logger.LogDebug("Deleting alias:" + alias);
                         Delete(alias);
+
+                        logger.LogDebug("Inserting alias:" + alias);
+                        Insert(alias, cert, privateKey, password);
                     }
-
-                    logger.LogDebug("Inserting alias:" + alias);
-                    Insert(alias, cert, privateKey, password);
-
-                    if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
+                    else
                     {
-                        //transfer binds back to original
-                        foreach (var existingUsageItem in existingUsage.currently_using)
-                        {
-                            logger.LogDebug($"Update binding for {existingUsageItem.name}");
-                            UpdateUsage(alias, existingUsageItem.path, existingUsageItem.name, existingUsageItem.attribute);
-                        }
-                    }
-
-                    //if we have an existing temp record, remove it
-                    if (byTmpAlias.Length > 0)
-                    {
-                        logger.LogDebug("Deleting temp alias:" + tmpAlias);
-                        Delete(tmpAlias);
+                        logger.LogDebug("Inserting alias:" + alias);
+                        Insert(alias, cert, privateKey, password);
                     }
                 }
                 else
                 {
+                    if (byAlias.Length > 0)
+                        throw new Exception($"Certificate {alias} already exists, but overwrite is set to false.  Try rescheduling job with overwrite set to true if you wish to replace this certificate.");
+
                     //no overwrite so we just try to insert
-                    logger.LogDebug("Inserting certificate with alias: " + alias);
+                    logger.LogDebug("Inserting alias: " + alias);
                     Insert(alias, cert, privateKey, password);
                 }
             }
@@ -274,24 +268,29 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         public Certificate[] List(string mkey)
         {
             logger.MethodEntry(LogLevel.Debug);
-
-            List<CurrentInventoryItem> items = new List<CurrentInventoryItem>();
+            Certificate[] certificates = new List<Certificate>().ToArray();
 
             try
             {
-                string endpoint = string.IsNullOrEmpty(mkey) ? available_certificates : available_certificates + "?mkey=" + mkey;
-                var result = GetResource(endpoint);
-                return JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
+                string endpoint = string.IsNullOrEmpty(mkey) ? available_certificates : available_certificates;
+                Dictionary<String, String> parameters = mkey == null ? null : new Dictionary<string, string> { { "mkey", mkey } };
+                var result = GetResource(endpoint, parameters);
+                certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
             }
             catch (Exception ex)
             {
-                logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error retrieving certificate list: "));
-                throw;
+                if (ex.GetType() != typeof(HttpRequestException) || ((HttpRequestException)ex).StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error retrieving certificate list: "));
+                    throw;
+                }
             }
             finally
             {
                 logger.MethodExit(LogLevel.Debug);
             }
+
+            return certificates;
         }
 
         public string DownloadFileAsString(string mkey, string type)
@@ -442,6 +441,19 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             {
                 logger.MethodExit(LogLevel.Debug);
             }
+        }
+
+        private string CreateNewAlias(string alias)
+        {
+            string suffix = $"-{DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss")}";
+            int aliasLengthOver = alias.Length + suffix.Length - 25;
+            if (aliasLengthOver > 0)
+            {
+                alias = alias.Substring(0, alias.Length - aliasLengthOver);
+            }
+            string rtnAlias = alias + suffix;
+
+            return rtnAlias;
         }
     }
 }
