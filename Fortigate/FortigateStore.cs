@@ -440,7 +440,10 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
         private string CreateNewAlias(string alias)
         {
-            string suffix = $"-{DateTime.Now.Ticks.ToString("X8")}";
+            string suffix = $"--{DateTime.Now.Ticks.ToString("X8")}";
+            int suffixIdx = alias.IndexOf("--");
+            string newAlias = suffixIdx == -1 ? alias : alias.Substring(0, suffixIdx);
+
             int aliasLengthOver = alias.Length + suffix.Length - 25;
             if (aliasLengthOver > 0)
             {
