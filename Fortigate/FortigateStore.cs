@@ -185,7 +185,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                             //if newAlias exists, end with error
                             if (byNewAlias.Length > 0)
                             {
-                                throw new Exception($"Error inserting certificate {alias}.  New alias {newAlias} already exists, so certificate {alias} that is bound to one or more objects, cannot be replaced and rebound.  Please remove {newAlias}, and try again.");        
+                                throw new Exception($"Error inserting certificate {alias}.  New alias {newAlias} already exists, so certificate {alias} that is bound to one or more objects, cannot be replaced and rebound.  Please remove {newAlias}, and try again.");
                             }
 
                             //create newAlias entry
@@ -194,18 +194,21 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
                             foreach (var existingUsing in existingUsage.currently_using)
                             {
+                                logger.LogDebug($"Update binding for path/name/attribute {existingUsing.path}/{existingUsing.name}/{existingUsing.attribute} for new alias {newAlias}");
                                 UpdateUsage(newAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
                             }
 
                             logger.LogDebug("Deleting alias:" + alias);
                             Delete(alias);
                         }
+                        else
+                        {
+                            logger.LogDebug("Deleting alias:" + alias);
+                            Delete(alias);
 
-                        logger.LogDebug("Deleting alias:" + alias);
-                        Delete(alias);
-
-                        logger.LogDebug("Inserting alias:" + alias);
-                        Insert(alias, cert, privateKey, password);
+                            logger.LogDebug("Inserting alias:" + alias);
+                            Insert(alias, cert, privateKey, password);
+                        }
                     }
                     else
                     {
@@ -445,7 +448,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
         private string CreateNewAlias(string alias)
         {
-            string suffix = $"-{DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss")}";
+            string suffix = $"-{DateTime.Now.Ticks.ToString("X8")}";
             int aliasLengthOver = alias.Length + suffix.Length - 25;
             if (aliasLengthOver > 0)
             {
