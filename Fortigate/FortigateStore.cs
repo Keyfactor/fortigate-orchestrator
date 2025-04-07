@@ -14,7 +14,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 
@@ -29,14 +28,7 @@ using System.Linq;
 using System.Web;
 using System.Text;
 using System.Net.Http.Headers;
-using Keyfactor.Orchestrators.Extensions;
 using Microsoft.Extensions.Logging;
-using Keyfactor.Orchestrators.Common.Enums;
-using System.Reflection.Metadata;
-using System.Linq.Expressions;
-using Org.BouncyCastle.Security;
-using System.Reflection.Metadata.Ecma335;
-using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
