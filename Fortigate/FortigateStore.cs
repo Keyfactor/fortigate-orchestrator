@@ -34,6 +34,9 @@ using Microsoft.Extensions.Logging;
 using Keyfactor.Orchestrators.Common.Enums;
 using System.Reflection.Metadata;
 using System.Linq.Expressions;
+using Org.BouncyCastle.Security;
+using System.Reflection.Metadata.Ecma335;
+using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -98,27 +101,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public bool Exists(string alias)
-        {
-            logger.MethodEntry(LogLevel.Debug);
-
-            try
-            {
-                var result = GetResource(get_certificate_api + alias);
-                var response = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result);
-
-                return (response.results != null && response.results.Length > 0);
-            } 
-            catch(Exception)
-            {
-                return false;
-            }
-            finally
-            {
-                logger.MethodExit(LogLevel.Debug);
-            }
-        }
-
         public void UpdateUsage(string alias, string path, string name, string attribute)
         {
             logger.MethodEntry(LogLevel.Debug);
@@ -148,7 +130,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public Usage Usage(string alias)
+        public Usage Usage(string alias, int qtype)
         {
             logger.MethodEntry(LogLevel.Debug);
 
@@ -156,7 +138,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             parameters.Add("vdom", "root");
             parameters.Add("scope", "global");
             parameters.Add("mkey", alias);
-            parameters.Add("qtypes", "[160]");
+            parameters.Add("qtypes", $"[{qtype.ToString()}]");
 
             try
             {
@@ -181,64 +163,66 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
+                Certificate[] byAlias = List(alias);
+
                 if (overwrite)
                 {
-                    var tmpAlias = alias + "_kftmp";
-                    var existing = Exists(alias);
-                    var tmpExisting = Exists(tmpAlias);
+                    var newAlias = CreateNewAlias(alias);
+                    Certificate[] byNewAlias = List(newAlias);
+                    Usage existingUsage = null;
 
                     //if there is an existing record
-                    if (existing)
+                    if (byAlias.Length > 0)
                     {
+                        Certificate certItem = byAlias[0];
+
                         //check to see if it's in use
-                        var existingUsage = Usage(alias);
+                        existingUsage = Usage(alias, certItem.q_type);
 
                         //if it's currently in use
-                        if (existingUsage.currently_using.Length > 0)
+                        if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
                         {
-                            //if we don't have a tmp create a temp
-                            if (!tmpExisting)
+                            //if newAlias exists, end with error
+                            if (byNewAlias.Length > 0)
                             {
-                                //create tmp
-                                Insert(tmpAlias, cert, privateKey);
-
-                                tmpExisting = true;
+                                throw new Exception($"Error inserting certificate {alias}.  New alias {newAlias} already exists, so certificate {alias} that is bound to one or more objects, cannot be replaced and rebound.  Please remove {newAlias}, and try again.");
                             }
+
+                            //create newAlias entry
+                            logger.LogDebug("Inserting alias:" + newAlias);
+                            Insert(newAlias, cert, privateKey, password);
 
                             foreach (var existingUsing in existingUsage.currently_using)
                             {
-                                UpdateUsage(tmpAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
+                                logger.LogDebug($"Update binding for path/name/attribute {existingUsing.path}/{existingUsing.name}/{existingUsing.attribute} for new alias {newAlias}");
+                                UpdateUsage(newAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
                             }
+
+                            logger.LogDebug("Deleting alias:" + alias);
+                            Delete(alias);
                         }
-
-                        logger.LogDebug("Deleting alias:" + alias);
-                        Delete(alias);
-                    }
-
-                    logger.LogDebug("Inserting alias:" + alias);
-                    Insert(alias, cert, privateKey, password);
-
-                    //if we have an existing temp record
-                    if (tmpExisting)
-                    {
-                        //check to see if it has any binds
-                        var tmpUsage = Usage(tmpAlias);
-                        if (tmpUsage.currently_using.Length > 0)
+                        else
                         {
-                            //transfer binds back to original
-                            foreach (var tmpUsing in tmpUsage.currently_using)
-                            {
-                                UpdateUsage(alias, tmpUsing.path, tmpUsing.name, tmpUsing.attribute);
-                            }
+                            logger.LogDebug("Deleting alias:" + alias);
+                            Delete(alias);
+
+                            logger.LogDebug("Inserting alias:" + alias);
+                            Insert(alias, cert, privateKey, password);
                         }
-                        logger.LogDebug("Deleting alias:" + tmpExisting);
-                        Delete(tmpAlias);
+                    }
+                    else
+                    {
+                        logger.LogDebug("Inserting alias:" + alias);
+                        Insert(alias, cert, privateKey, password);
                     }
                 }
                 else
                 {
+                    if (byAlias.Length > 0)
+                        throw new Exception($"Certificate {alias} already exists, but overwrite is set to false.  Try rescheduling job with overwrite set to true if you wish to replace this certificate.");
+
                     //no overwrite so we just try to insert
-                    logger.LogDebug("Inserting certificate with alias: " + alias);
+                    logger.LogDebug("Inserting alias: " + alias);
                     Insert(alias, cert, privateKey, password);
                 }
             }
@@ -284,50 +268,35 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public List<CurrentInventoryItem> List()
+        public Certificate[] List(string mkey)
         {
             logger.MethodEntry(LogLevel.Debug);
-
-            List<CurrentInventoryItem> items = new List<CurrentInventoryItem>();
+            Certificate[] certificates = new List<Certificate>().ToArray();
 
             try
-            { 
-                var result = GetResource(available_certificates);
-                var response = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result);
-
-                foreach( var cert in response.results)
-                {
-                    if (cert.type == "local-cer")
-                    {
-                        var certFile = DownloadFileAsString(cert.name, cert.type);
-
-                        var item = new CurrentInventoryItem()
-                        {
-                            Alias = cert.name,
-                            Certificates = new string[] { certFile },
-                            ItemStatus = OrchestratorInventoryItemStatus.Unknown,
-                            PrivateKeyEntry = true,
-                            UseChainLevel = false
-                        };
-
-                        items.Add(item);
-                    }
-                }
-
-                return items;
+            {
+                string endpoint = string.IsNullOrEmpty(mkey) ? available_certificates : available_certificates;
+                Dictionary<String, String> parameters = mkey == null ? null : new Dictionary<string, string> { { "mkey", mkey } };
+                var result = GetResource(endpoint, parameters);
+                certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
             }
             catch (Exception ex)
             {
-                logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error retrieving certificate list: "));
-                throw;
+                if (ex.GetType() != typeof(HttpRequestException) || ((HttpRequestException)ex).StatusCode != System.Net.HttpStatusCode.NotFound)
+                {
+                    logger.LogError(FortigateException.FlattenExceptionMessages(ex, "Error retrieving certificate list: "));
+                    throw;
+                }
             }
             finally
             {
                 logger.MethodExit(LogLevel.Debug);
             }
+
+            return certificates;
         }
 
-        private string DownloadFileAsString(string mkey, string type)
+        public string DownloadFileAsString(string mkey, string type)
         {
             logger.MethodEntry(LogLevel.Debug);
 
@@ -475,6 +444,19 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             {
                 logger.MethodExit(LogLevel.Debug);
             }
+        }
+
+        private string CreateNewAlias(string alias)
+        {
+            string suffix = $"-{DateTime.Now.Ticks.ToString("X8")}";
+            int aliasLengthOver = alias.Length + suffix.Length - 25;
+            if (aliasLengthOver > 0)
+            {
+                alias = alias.Substring(0, alias.Length - aliasLengthOver);
+            }
+            string rtnAlias = alias + suffix;
+
+            return rtnAlias;
         }
     }
 }

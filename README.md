@@ -50,7 +50,7 @@ The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 This integration is compatible with Keyfactor Universal Orchestrator version 10.1 and later.
 
 ## Support
-The Fortigate Universal Orchestrator extension is open source and community supported, meaning that there is **no SLA** applicable. 
+The Fortigate Universal Orchestrator extension is open source and there is **no SLA**. Keyfactor will address issues as resources become available. Keyfactor customers may request escalation by opening up a support ticket through their Keyfactor representative. 
  
 > To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
 
@@ -111,6 +111,8 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
     The Advanced tab should look like this:
 
     ![Fortigate Advanced Tab](docsource/images/Fortigate-advanced-store-type-dialog.png)
+
+    > For Keyfactor **Command versions 24.4 and later**, a Certificate Format dropdown is available with PFX and PEM options. Ensure that **PFX** is selected, as this determines the format of new and renewed certificates sent to the Orchestrator during a Management job. Currently, all Keyfactor-supported Orchestrator extensions support only PFX.
 
     #### Custom Fields Tab
     Custom fields operate at the certificate store level and are used to control how the orchestrator connects to the remote target server containing the certificate store to be managed. The following custom fields should be added to the store type:
