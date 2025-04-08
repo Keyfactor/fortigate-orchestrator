@@ -34,14 +34,16 @@
 The Fortigate Orchestrator Extension supports the following use cases:
 1. Inventory of local user and factory cerificates
 2. Ability to add new local certificates
-3. Ability to renew **unbound** local user certificates
+3. Ability to replace bound* and unbound local user certificates (usually after renewal in Keyfactor Command)
 4. Ability to delete **unbound** local user certificates
 
 The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 1. The renewal or removal of certificates enrolled through the internal Fortigate CA
 2. The renewal or removal of factory certificates
-3. The renewal or removal of ANY certificate bound to a Fortigate object
+3. The removal of ANY certificate bound to a Fortigate object
 4. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation" use case)
+
+* Because the Fortigate API does not allow for updating certificates in place, and to avoid temporary outages, when replacing local certificates that are bound, it is necessary to create a new name (alias) for the certificate.  The new name is created using the first 8 characters of the previous name (larger names truncated due to Fortigate name length constraints) allong with a suffix comprised of "--" and a 15 character hash of the current date/time.  The replaced certificate with the old name is then removed from the Fortigate instance.  For example, a bound certificate with the name "CertName" would be replaced and the name would then be "CertName--8DD76A97A98E4C1".  The existing bindings would remain in place with the new name.  At no point during the management job would any of the bound objects be left without a valid certificate binding.
 
 
 
@@ -50,7 +52,7 @@ The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 This integration is compatible with Keyfactor Universal Orchestrator version 10.1 and later.
 
 ## Support
-The Fortigate Universal Orchestrator extension is open source and community supported, meaning that there is **no SLA** applicable. 
+The Fortigate Universal Orchestrator extension is open source and there is **no SLA**. Keyfactor will address issues as resources become available. Keyfactor customers may request escalation by opening up a support ticket through their Keyfactor representative. 
  
 > To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
 
@@ -111,6 +113,8 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
     The Advanced tab should look like this:
 
     ![Fortigate Advanced Tab](docsource/images/Fortigate-advanced-store-type-dialog.png)
+
+    > For Keyfactor **Command versions 24.4 and later**, a Certificate Format dropdown is available with PFX and PEM options. Ensure that **PFX** is selected, as this determines the format of new and renewed certificates sent to the Orchestrator during a Management job. Currently, all Keyfactor-supported Orchestrator extensions support only PFX.
 
     #### Custom Fields Tab
     Custom fields operate at the certificate store level and are used to control how the orchestrator connects to the remote target server containing the certificate store to be managed. The following custom fields should be added to the store type:
