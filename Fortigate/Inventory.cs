@@ -44,7 +44,25 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
-                inventoryItems = store.List();
+                Api.Certificate[] certificates = store.List(null);
+                foreach (var cert in certificates)
+                {
+                    if (cert.type == "local-cer")
+                    {
+                        var certFile = store.DownloadFileAsString(cert.name, cert.type);
+
+                        var item = new CurrentInventoryItem()
+                        {
+                            Alias = cert.name,
+                            Certificates = new string[] { certFile },
+                            ItemStatus = OrchestratorInventoryItemStatus.Unknown,
+                            PrivateKeyEntry = true,
+                            UseChainLevel = false
+                        };
+
+                        inventoryItems.Add(item);
+                    }
+                }
             }
             catch (Exception ex)
             {
