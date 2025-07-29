@@ -29,6 +29,7 @@ using System.Web;
 using System.Text;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -149,7 +150,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        public void Insert(string alias, string cert, string privateKey, bool overwrite, string password = null)
+        public void Insert(string alias, string cert, string privateKey, bool overwrite, bool archiveOldCertificate, string password = null)
         {
             logger.MethodEntry(LogLevel.Debug);
 
@@ -191,7 +192,12 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                             }
 
                             logger.LogDebug("Deleting alias:" + alias);
+                            if (archiveOldCertificate)
+                            {
+                                RenameCertificateAlias(alias, alias + "-" + DateTime.Now.ToString("yyyy-MM-yy-hh-mm-ss"));
+                            }
                             Delete(alias);
+                            RenameCertificateAlias(newAlias, alias);
                         }
                         else
                         {
@@ -247,7 +253,33 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             parameters.Add("vdom", "root");
             try
             {
-                PostAsJson(import_certificate_api, cert_resource, parameters);
+                PostAsJson(HttpMethod.Post, import_certificate_api, cert_resource, parameters);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error inserting certificate {alias}: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private void RenameCertificateAlias(string oldAlias, string newAlias)
+        {
+            logger.MethodEntry(LogLevel.Debug);
+
+            RenameAlias renameAliasRequest = new RenameAlias()
+            {
+                name = newAlias
+            };
+
+            var parameters = new Dictionary<String, String>();
+            parameters.Add("vdom", "root");
+            try
+            {
+                PostAsJson(HttpMethod.Put, import_certificate_api, cert_resource, parameters);
             }
             catch (Exception ex)
             {
@@ -316,7 +348,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        private String PostAsJson(string endpoint, cmdb_certificate_resource obj, Dictionary<String, String> additionalParams = null)
+        private String PostAsJson(HttpMethod method, string endpoint, cmdb_certificate_resource obj, Dictionary<String, String> additionalParams = null)
         {
             logger.MethodEntry(LogLevel.Debug);
 
@@ -327,7 +359,14 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
-                HttpResponseMessage responseMessage = client.PostAsync(url, stringContent).GetAwaiter().GetResult();
+                HttpResponseMessage responseMessage = new HttpResponseMessage();
+                if (method == HttpMethod.Post)
+                {
+                    responseMessage = client.PostAsync(url, stringContent).GetAwaiter().GetResult();
+                }
+                {
+                    responseMessage = client.PutAsync(url, stringContent).GetAwaiter().GetResult();
+                }
                 content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (!responseMessage.IsSuccessStatusCode)
                     throw new Exception($"Error adding certificate {obj.certname}: {content}");
