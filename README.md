@@ -52,9 +52,9 @@ The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 This integration is compatible with Keyfactor Universal Orchestrator version 10.1 and later.
 
 ## Support
-The Fortigate Universal Orchestrator extension is open source and there is **no SLA**. Keyfactor will address issues as resources become available. Keyfactor customers may request escalation by opening up a support ticket through their Keyfactor representative. 
- 
-> To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute actual bug fixes or proposed enhancements, use the **[Pull requests](../../pulls)** tab.
+The Fortigate Universal Orchestrator extension is community open source and there is **no SLA**. Keyfactor will address issues as resources become available.
+
+> To report a problem or suggest a new feature, use the **[Issues](../../issues)** tab. If you want to contribute bug fixes or additional enhancements, use the **[Pull requests](../../pulls)** tab.
 
 ## Requirements & Prerequisites
 
@@ -64,84 +64,117 @@ Before installing the Fortigate Universal Orchestrator extension, we recommend t
 The Fortigate Orchestrator Extension requires an API token be created in the Fortigate environment being managed.  Please review the following [instructions](https://docs.fortinet.com/document/forticonverter/7.0.1/online-help/866905/connect-fortigate-device-via-api-token) for creating an API token to be used in this integration.
 
 
-## Create the Fortigate Certificate Store Type
+## Fortigate Certificate Store Type
 
 To use the Fortigate Universal Orchestrator extension, you **must** create the Fortigate Certificate Store Type. This only needs to happen _once_ per Keyfactor Command instance.
 
 
 
-* **Create Fortigate using kfutil**:
-
-    ```shell
-    # Fortigate
-    kfutil store-types create Fortigate
-    ```
-
-* **Create Fortigate manually in the Command UI**:
-    <details><summary>Create Fortigate manually in the Command UI</summary>
-
-    Create a store type called `Fortigate` with the attributes in the tables below:
-
-    #### Basic Tab
-    | Attribute | Value | Description |
-    | --------- | ----- | ----- |
-    | Name | Fortigate | Display name for the store type (may be customized) |
-    | Short Name | Fortigate | Short display name for the store type |
-    | Capability | Fortigate | Store type name orchestrator will register with. Check the box to allow entry of value |
-    | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
-    | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
-    | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
-    | Supports Reenrollment | 🔲 Unchecked |  Indicates that the Store Type supports Reenrollment |
-    | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
-    | Needs Server | 🔲 Unchecked | Determines if a target server name is required when creating store |
-    | Blueprint Allowed | ✅ Checked | Determines if store type may be included in an Orchestrator blueprint |
-    | Uses PowerShell | 🔲 Unchecked | Determines if underlying implementation is PowerShell |
-    | Requires Store Password | ✅ Checked | Enables users to optionally specify a store password when defining a Certificate Store. |
-    | Supports Entry Password | 🔲 Unchecked | Determines if an individual entry within a store can have a password. |
-
-    The Basic tab should look like this:
-
-    ![Fortigate Basic Tab](docsource/images/Fortigate-basic-store-type-dialog.png)
-
-    #### Advanced Tab
-    | Attribute | Value | Description |
-    | --------- | ----- | ----- |
-    | Supports Custom Alias | Required | Determines if an individual entry within a store can have a custom Alias. |
-    | Private Key Handling | Required | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
-    | PFX Password Style | Default | 'Default' - PFX password is randomly generated, 'Custom' - PFX password may be specified when the enrollment job is created (Requires the Allow Custom Password application setting to be enabled.) |
-
-    The Advanced tab should look like this:
-
-    ![Fortigate Advanced Tab](docsource/images/Fortigate-advanced-store-type-dialog.png)
-
-    > For Keyfactor **Command versions 24.4 and later**, a Certificate Format dropdown is available with PFX and PEM options. Ensure that **PFX** is selected, as this determines the format of new and renewed certificates sent to the Orchestrator during a Management job. Currently, all Keyfactor-supported Orchestrator extensions support only PFX.
-
-    #### Custom Fields Tab
-    Custom fields operate at the certificate store level and are used to control how the orchestrator connects to the remote target server containing the certificate store to be managed. The following custom fields should be added to the store type:
-
-    | Name | Display Name | Description | Type | Default Value/Options | Required |
-    | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
-
-    The Custom Fields tab should look like this:
-
-    ![Fortigate Custom Fields Tab](docsource/images/Fortigate-custom-fields-store-type-dialog.png)
 
 
 
-    </details>
+
+
+#### Supported Operations
+
+| Operation    | Is Supported                                                                                                           |
+|--------------|------------------------------------------------------------------------------------------------------------------------|
+| Add          | ✅ Checked        |
+| Remove       | ✅ Checked     |
+| Discovery    | 🔲 Unchecked  |
+| Reenrollment | 🔲 Unchecked |
+| Create       | 🔲 Unchecked     |
+
+#### Store Type Creation
+
+##### Using kfutil:
+`kfutil` is a custom CLI for the Keyfactor Command API and can be used to create certificate store types.
+For more information on [kfutil](https://github.com/Keyfactor/kfutil) check out the [docs](https://github.com/Keyfactor/kfutil?tab=readme-ov-file#quickstart)
+   <details><summary>Click to expand Fortigate kfutil details</summary>
+
+   ##### Using online definition from GitHub:
+   This will reach out to GitHub and pull the latest store-type definition
+   ```shell
+   # Fortigate
+   kfutil store-types create Fortigate
+   ```
+
+   ##### Offline creation using integration-manifest file:
+   If required, it is possible to create store types from the [integration-manifest.json](./integration-manifest.json) included in this repo.
+   You would first download the [integration-manifest.json](./integration-manifest.json) and then run the following command
+   in your offline environment.
+   ```shell
+   kfutil store-types create --from-file integration-manifest.json
+   ```
+   </details>
+
+
+#### Manual Creation
+Below are instructions on how to create the Fortigate store type manually in
+the Keyfactor Command Portal
+   <details><summary>Click to expand manual Fortigate details</summary>
+
+   Create a store type called `Fortigate` with the attributes in the tables below:
+
+   ##### Basic Tab
+   | Attribute | Value | Description |
+   | --------- | ----- | ----- |
+   | Name | Fortigate | Display name for the store type (may be customized) |
+   | Short Name | Fortigate | Short display name for the store type |
+   | Capability | Fortigate | Store type name orchestrator will register with. Check the box to allow entry of value |
+   | Supports Add | ✅ Checked | Check the box. Indicates that the Store Type supports Management Add |
+   | Supports Remove | ✅ Checked | Check the box. Indicates that the Store Type supports Management Remove |
+   | Supports Discovery | 🔲 Unchecked |  Indicates that the Store Type supports Discovery |
+   | Supports Reenrollment | 🔲 Unchecked |  Indicates that the Store Type supports Reenrollment |
+   | Supports Create | 🔲 Unchecked |  Indicates that the Store Type supports store creation |
+   | Needs Server | 🔲 Unchecked | Determines if a target server name is required when creating store |
+   | Blueprint Allowed | ✅ Checked | Determines if store type may be included in an Orchestrator blueprint |
+   | Uses PowerShell | 🔲 Unchecked | Determines if underlying implementation is PowerShell |
+   | Requires Store Password | ✅ Checked | Enables users to optionally specify a store password when defining a Certificate Store. |
+   | Supports Entry Password | 🔲 Unchecked | Determines if an individual entry within a store can have a password. |
+
+   The Basic tab should look like this:
+
+   ![Fortigate Basic Tab](docsource/images/Fortigate-basic-store-type-dialog.png)
+
+   ##### Advanced Tab
+   | Attribute | Value | Description |
+   | --------- | ----- | ----- |
+   | Supports Custom Alias | Required | Determines if an individual entry within a store can have a custom Alias. |
+   | Private Key Handling | Required | This determines if Keyfactor can send the private key associated with a certificate to the store. Required because IIS certificates without private keys would be invalid. |
+   | PFX Password Style | Default | 'Default' - PFX password is randomly generated, 'Custom' - PFX password may be specified when the enrollment job is created (Requires the Allow Custom Password application setting to be enabled.) |
+
+   The Advanced tab should look like this:
+
+   ![Fortigate Advanced Tab](docsource/images/Fortigate-advanced-store-type-dialog.png)
+
+   > For Keyfactor **Command versions 24.4 and later**, a Certificate Format dropdown is available with PFX and PEM options. Ensure that **PFX** is selected, as this determines the format of new and renewed certificates sent to the Orchestrator during a Management job. Currently, all Keyfactor-supported Orchestrator extensions support only PFX.
+
+   ##### Custom Fields Tab
+   Custom fields operate at the certificate store level and are used to control how the orchestrator connects to the remote target server containing the certificate store to be managed. The following custom fields should be added to the store type:
+
+   | Name | Display Name | Description | Type | Default Value/Options | Required |
+   | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
+
+   The Custom Fields tab should look like this:
+
+   ![Fortigate Custom Fields Tab](docsource/images/Fortigate-custom-fields-store-type-dialog.png)
+
+   </details>
 
 ## Installation
 
-1. **Download the latest Fortigate Universal Orchestrator extension from GitHub.** 
+1. **Download the latest Fortigate Universal Orchestrator extension from GitHub.**
 
     Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
-    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `fortigate-orchestrator` .NET version to download |
-    | --------- | ----------- | ----------- | ----------- |
-    | Older than `11.0.0` | | | `net6.0` |
-    | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` | 
-    | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Disable` | `net6.0` | 
-    | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` | 
-    | `11.6` _and_ newer | `net8.0` | | `net8.0` |
+
+   | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `fortigate-orchestrator` .NET version to download |
+   | --------- | ----------- | ----------- | ----------- |
+   | Older than `11.0.0` | | | `net6.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Disable` | `net6.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` |
+   | `11.6` _and_ newer | `net8.0` | | `net8.0` |
 
     Unzip the archive containing extension assemblies to a known location.
 
@@ -151,9 +184,9 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
 
     * **Default on Windows** - `C:\Program Files\Keyfactor\Keyfactor Orchestrator\extensions`
     * **Default on Linux** - `/opt/keyfactor/orchestrator/extensions`
-    
+
 3. **Create a new directory for the Fortigate Universal Orchestrator extension inside the extensions directory.**
-        
+
     Create a new directory called `fortigate-orchestrator`.
     > The directory name does not need to match any names used elsewhere; it just has to be unique within the extensions directory.
 
@@ -164,14 +197,14 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
     Refer to [Starting/Restarting the Universal Orchestrator service](https://software.keyfactor.com/Core-OnPrem/Current/Content/InstallingAgents/NetCoreOrchestrator/StarttheService.htm).
 
 
-6. **(optional) PAM Integration** 
+6. **(optional) PAM Integration**
 
     The Fortigate Universal Orchestrator extension is compatible with all supported Keyfactor PAM extensions to resolve PAM-eligible secrets. PAM extensions running on Universal Orchestrators enable secure retrieval of secrets from a connected PAM provider.
 
-    To configure a PAM provider, [reference the Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam) to select an extension, and follow the associated instructions to install it on the Universal Orchestrator (remote).
+    To configure a PAM provider, [reference the Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam) to select an extension and follow the associated instructions to install it on the Universal Orchestrator (remote).
 
 
-> The above installation steps can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/InstallingAgents/NetCoreOrchestrator/CustomExtensions.htm?Highlight=extensions).
+> The above installation steps can be supplemented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/InstallingAgents/NetCoreOrchestrator/CustomExtensions.htm?Highlight=extensions).
 
 
 
@@ -179,85 +212,80 @@ To use the Fortigate Universal Orchestrator extension, you **must** create the F
 
 
 
-* **Manually with the Command UI**
+### Store Creation
 
-    <details><summary>Create Certificate Stores manually in the UI</summary>
+#### Manually with the Command UI
 
-    1. **Navigate to the _Certificate Stores_ page in Keyfactor Command.**
+<details><summary>Click to expand details</summary>
 
-        Log into Keyfactor Command, toggle the _Locations_ dropdown, and click _Certificate Stores_.
+1. **Navigate to the _Certificate Stores_ page in Keyfactor Command.**
 
-    2. **Add a Certificate Store.**
+    Log into Keyfactor Command, toggle the _Locations_ dropdown, and click _Certificate Stores_.
 
-        Click the Add button to add a new Certificate Store. Use the table below to populate the **Attributes** in the **Add** form.
-        | Attribute | Description |
-        | --------- | ----------- |
-        | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
-        | Container | Optional container to associate certificate store with. |
-        | Client Machine | The IP address or DNS of the Fortigate server |
-        | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
-        | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
-        | Store Password | Enter the Fortigate API Token here |
+2. **Add a Certificate Store.**
 
-        
+    Click the Add button to add a new Certificate Store. Use the table below to populate the **Attributes** in the **Add** form.
 
-        <details><summary>Attributes eligible for retrieval by a PAM Provider on the Universal Orchestrator</summary>
+   | Attribute | Description                                             |
+   | --------- |---------------------------------------------------------|
+   | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
+   | Container | Optional container to associate certificate store with. |
+   | Client Machine | The IP address or DNS of the Fortigate server |
+   | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
+   | Store Password | Enter the Fortigate API Token here |
+   | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
-        If a PAM provider was installed _on the Universal Orchestrator_ in the [Installation](#Installation) section, the following parameters can be configured for retrieval _on the Universal Orchestrator_.
-        | Attribute | Description |
-        | --------- | ----------- |
-        | Store Password | Enter the Fortigate API Token here |
+</details>
 
-        Please refer to the **Universal Orchestrator (remote)** usage section ([PAM providers on the Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam)) for your selected PAM provider for instructions on how to load attributes orchestrator-side.
 
-        > Any secret can be rendered by a PAM provider _installed on the Keyfactor Command server_. The above parameters are specific to attributes that can be fetched by an installed PAM provider running on the Universal Orchestrator server itself. 
-        </details>
-        
 
-    </details>
+#### Using kfutil CLI
 
-* **Using kfutil**
-    
-    <details><summary>Create Certificate Stores with kfutil</summary>
-    
-    1. **Generate a CSV template for the Fortigate certificate store**
+<details><summary>Click to expand details</summary>
 
-        ```shell
-        kfutil stores import generate-template --store-type-name Fortigate --outpath Fortigate.csv
-        ```
-    2. **Populate the generated CSV file**
+1. **Generate a CSV template for the Fortigate certificate store**
 
-        Open the CSV file, and reference the table below to populate parameters for each **Attribute**.
-        | Attribute | Description |
-        | --------- | ----------- |
-        | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
-        | Container | Optional container to associate certificate store with. |
-        | Client Machine | The IP address or DNS of the Fortigate server |
-        | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
-        | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
-        | Store Password | Enter the Fortigate API Token here |
+    ```shell
+    kfutil stores import generate-template --store-type-name Fortigate --outpath Fortigate.csv
+    ```
+2. **Populate the generated CSV file**
 
-        
+    Open the CSV file, and reference the table below to populate parameters for each **Attribute**.
 
-        <details><summary>Attributes eligible for retrieval by a PAM Provider on the Universal Orchestrator</summary>
+   | Attribute | Description |
+   | --------- | ----------- |
+   | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
+   | Container | Optional container to associate certificate store with. |
+   | Client Machine | The IP address or DNS of the Fortigate server |
+   | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
+   | Store Password | Enter the Fortigate API Token here |
+   | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
-        If a PAM provider was installed _on the Universal Orchestrator_ in the [Installation](#Installation) section, the following parameters can be configured for retrieval _on the Universal Orchestrator_.
-        | Attribute | Description |
-        | --------- | ----------- |
-        | Store Password | Enter the Fortigate API Token here |
+3. **Import the CSV file to create the certificate stores**
 
-        > Any secret can be rendered by a PAM provider _installed on the Keyfactor Command server_. The above parameters are specific to attributes that can be fetched by an installed PAM provider running on the Universal Orchestrator server itself. 
-        </details>
-        
+    ```shell
+    kfutil stores import csv --store-type-name Fortigate --file Fortigate.csv
+    ```
 
-    3. **Import the CSV file to create the certificate stores** 
+</details>
 
-        ```shell
-        kfutil stores import csv --store-type-name Fortigate --file Fortigate.csv
-        ```
-    </details>
 
-> The content in this section can be supplimented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/ReferenceGuide/Certificate%20Stores.htm?Highlight=certificate%20store).
+#### PAM Provider Eligible Fields
+<details><summary>Attributes eligible for retrieval by a PAM Provider on the Universal Orchestrator</summary>
+
+If a PAM provider was installed _on the Universal Orchestrator_ in the [Installation](#Installation) section, the following parameters can be configured for retrieval _on the Universal Orchestrator_.
+
+   | Attribute | Description |
+   | --------- | ----------- |
+   | StorePassword | Enter the Fortigate API Token here |
+
+Please refer to the **Universal Orchestrator (remote)** usage section ([PAM providers on the Keyfactor Integration Catalog](https://keyfactor.github.io/integrations-catalog/content/pam)) for your selected PAM provider for instructions on how to load attributes orchestrator-side.
+> Any secret can be rendered by a PAM provider _installed on the Keyfactor Command server_. The above parameters are specific to attributes that can be fetched by an installed PAM provider running on the Universal Orchestrator server itself.
+
+</details>
+
+
+> The content in this section can be supplemented by the [official Command documentation](https://software.keyfactor.com/Core-OnPrem/Current/Content/ReferenceGuide/Certificate%20Stores.htm?Highlight=certificate%20store).
 
 
 
