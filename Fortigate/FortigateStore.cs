@@ -29,6 +29,7 @@ using System.Web;
 using System.Text;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
@@ -53,6 +54,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         private static readonly string delete_certificate_api = "/api/v2/cmdb/vpn.certificate/local/";
 
         private static readonly string cert_usage_api = "/api/v2/monitor/system/object/usage";
+        private static readonly string https_usage_api = "/api/v2/cmdb/system/global";
 
         private readonly HttpClientHandler handler = new HttpClientHandler()
         {
@@ -149,6 +151,46 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
+        public string HttpsServerUsage()
+        {
+            logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                var result = GetResource(https_usage_api, new Dictionary<String, String>());
+                return JsonConvert.DeserializeObject<FortigateResponse<HttpsUsage>>(result).results.AdminServerCert;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error checking https bindings: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public void UpdateHttpsServerUsage(string alias)
+        {
+            logger.MethodEntry(LogLevel.Debug);
+            HttpUsageRequest request = new HttpUsageRequest() { AdminServerCert = new OriginKey() { QOriginKey = alias } };
+
+            try
+            {
+                PutAsJson(https_usage_api, request, new Dictionary<string, string>());
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error updating https server binding: "));
+                throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
         public void Insert(string alias, string cert, string privateKey, bool overwrite, string password = null)
         {
             logger.MethodEntry(LogLevel.Debug);
@@ -170,9 +212,10 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
                         //check to see if it's in use
                         existingUsage = Usage(alias, certItem.q_type);
+                        bool existingHttpsUsage = HttpsServerUsage() == alias;
 
                         //if it's currently in use
-                        if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
+                        if ((existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0) || existingHttpsUsage)
                         {
                             //if newAlias exists, end with error
                             if (byNewAlias.Length > 0)
@@ -184,10 +227,18 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                             logger.LogDebug("Inserting alias:" + newAlias);
                             Insert(newAlias, cert, privateKey, password);
 
-                            foreach (var existingUsing in existingUsage.currently_using)
+                            if (existingUsage != null && existingUsage.currently_using != null && existingUsage.currently_using.Length > 0)
                             {
-                                logger.LogDebug($"Update binding for path/name/attribute {existingUsing.path}/{existingUsing.name}/{existingUsing.attribute} for new alias {newAlias}");
-                                UpdateUsage(newAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
+                                foreach (var existingUsing in existingUsage.currently_using)
+                                {
+                                    logger.LogDebug($"Update binding for path/name/attribute {existingUsing.path}/{existingUsing.name}/{existingUsing.attribute} for new alias {newAlias}");
+                                    UpdateUsage(newAlias, existingUsing.path, existingUsing.name, existingUsing.attribute);
+                                }
+                            }
+
+                            if (existingHttpsUsage)
+                            {
+                                UpdateHttpsServerUsage(newAlias);
                             }
 
                             logger.LogDebug("Deleting alias:" + alias);
