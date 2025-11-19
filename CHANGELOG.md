@@ -1,3 +1,6 @@
+v1.3.0
+- Add support for renewing certificate bound to the HTTPS server
+
 v1.2.0
 - Allow for the management (renew/replace) of bound certificates
 
