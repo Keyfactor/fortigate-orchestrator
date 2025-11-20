@@ -163,6 +163,9 @@ the Keyfactor Command Portal
 
    ![Fortigate Custom Fields Tab](docsource/images/Fortigate-custom-fields-store-type-dialog.png)
 
+
+
+
    </details>
 
 ## Installation
