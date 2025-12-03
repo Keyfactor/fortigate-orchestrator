@@ -36,6 +36,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
     {
         private ILogger logger { get; set; }
         private string FortigateHost { get; set; }
+        private string VDOM {  get; set; }
+        private string Scope { get; set; }
 
 
         private static readonly string available_certificates = "/api/v2/monitor/system/available-certificates";
@@ -61,7 +63,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         };
         private readonly HttpClient client;
 
-        public FortigateStore(string fortigateHost, string accessToken)
+        public FortigateStore(string fortigateHost, string accessToken, string vdom)
         {
             logger = LogHandler.GetClassLogger(this.GetType());
 
@@ -70,6 +72,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             client = new HttpClient(handler);
             FortigateHost = fortigateHost;
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
+            VDOM = vdom;
+            Scope = vdom.Equals("root", StringComparison.OrdinalIgnoreCase) ? "global" : "vdom";
 
             logger.MethodExit(LogLevel.Debug);
         }
@@ -267,7 +271,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
-                string endpoint = string.IsNullOrEmpty(mkey) ? available_certificates : available_certificates;
+                string endpoint = available_certificates;
                 Dictionary<String, String> parameters = mkey == null ? null : new Dictionary<string, string> { { "mkey", mkey } };
                 var result = GetResource(endpoint, parameters);
                 certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;

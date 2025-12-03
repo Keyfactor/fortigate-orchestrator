@@ -37,8 +37,11 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             ILogger logger = LogHandler.GetClassLogger(this.GetType());
             logger.LogDebug($"Begin {config.Capability} for job id {config.JobId}...");
             logger.LogDebug($"Client Machine: {config.CertificateStoreDetails.ClientMachine}");
+            logger.LogDebug($"Store Path: {config.CertificateStoreDetails.StorePath}");
 
-            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword));
+            string vdom = string.IsNullOrEmpty(config.CertificateStoreDetails.StorePath) ? "root" : config.CertificateStoreDetails.StorePath;
+            
+            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword), vdom);
 
             List<CurrentInventoryItem> inventoryItems = new List<CurrentInventoryItem>();
 
