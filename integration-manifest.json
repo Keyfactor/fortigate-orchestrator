@@ -31,7 +31,18 @@
                         "Enrollment": false,
                         "Remove": true
                     },
-                    "Properties": [],
+                    "Properties": [
+                      {
+                        "Name": "VDOM",
+                        "DisplayName": "VDOM",
+                        "Type": "String",
+                        "DependsOn": "",
+                        "DefaultValue": "",
+                        "Required": false,
+                        "IsPAMEligible": false,
+                        "Description": "The Fortigate VDOM this store will manage.  If this custom field is missing or set to blank, the Fortigate APIs will operate on 'root' although this will not be explicitly set in the API calls."
+                      }
+                    ],
                     "EntryParameters": [],
                     "PasswordOptions": {
                         "Style": "Default",

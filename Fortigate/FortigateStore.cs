@@ -242,10 +242,11 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 certname = alias,
                 key_file_content = privateKey,
                 file_content = cert,
-                scope = "global",
-                //password = password,
+                scope = VDOM == null ? "global" : "vdom",
                 type = "regular"
             };
+            if (VDOM != null)
+                cert_resource.vdom = VDOM;
 
             var parameters = new Dictionary<String, String>();
             parameters.Add("vdom", "root");
@@ -272,7 +273,11 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             try
             {
                 string endpoint = available_certificates;
-                Dictionary<String, String> parameters = mkey == null ? null : new Dictionary<string, string> { { "mkey", mkey } };
+                Dictionary<String, String> parameters = new Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(mkey))
+                    parameters.Add("mkey", mkey);
+                if (VDOM != null))
+                    parameters.Add("vdom", VDOM);
                 var result = GetResource(endpoint, parameters);
                 certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
             }
@@ -299,6 +304,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             var parameters = new Dictionary<String, String>();
             parameters.Add("mkey", mkey);
             parameters.Add("type", type);
+            if (VDOM != null)
+                parameters.Add("vdom", VDOM);
 
             try
             {

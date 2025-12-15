@@ -22,7 +22,7 @@ using Keyfactor.Orchestrators.Extensions.Interfaces;
 
 namespace Keyfactor.Extensions.Orchestrator.Fortigate
 {
-    public class Inventory : IInventoryJobExtension
+    public class Inventory : BaseJob, IInventoryJobExtension
     {
         public IPAMSecretResolver _resolver;
         public string ExtensionName => string.Empty;
@@ -39,9 +39,9 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.LogDebug($"Client Machine: {config.CertificateStoreDetails.ClientMachine}");
             logger.LogDebug($"Store Path: {config.CertificateStoreDetails.StorePath}");
 
-            string vdom = string.IsNullOrEmpty(config.CertificateStoreDetails.StorePath) ? "root" : config.CertificateStoreDetails.StorePath;
-            
-            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword), vdom);
+            SetProperties(config.CertificateStoreDetails.Properties, logger);
+
+            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword), VDOM);
 
             List<CurrentInventoryItem> inventoryItems = new List<CurrentInventoryItem>();
 
