@@ -155,10 +155,18 @@ the Keyfactor Command Portal
 
    | Name | Display Name | Description | Type | Default Value/Options | Required |
    | ---- | ------------ | ---- | --------------------- | -------- | ----------- |
+   | VDOM | VDOM | The Fortigate VDOM this store will manage.  If this custom field is missing or set to blank, the Fortigate APIs will operate on 'root' although this will not be explicitly set in the API calls. | String |  | 🔲 Unchecked |
 
    The Custom Fields tab should look like this:
 
    ![Fortigate Custom Fields Tab](docsource/images/Fortigate-custom-fields-store-type-dialog.png)
+
+
+   ###### VDOM
+   The Fortigate VDOM this store will manage.  If this custom field is missing or set to blank, the Fortigate APIs will operate on 'root' although this will not be explicitly set in the API calls.
+
+   ![Fortigate Custom Field - VDOM](docsource/images/Fortigate-custom-field-VDOM-dialog.png)
+
 
 
 
@@ -236,6 +244,7 @@ the Keyfactor Command Portal
    | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
+   | VDOM | The Fortigate VDOM this store will manage.  If this custom field is missing or set to blank, the Fortigate APIs will operate on 'root' although this will not be explicitly set in the API calls. |
 
 </details>
 
@@ -262,6 +271,7 @@ the Keyfactor Command Portal
    | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
+   | Properties.VDOM | The Fortigate VDOM this store will manage.  If this custom field is missing or set to blank, the Fortigate APIs will operate on 'root' although this will not be explicitly set in the API calls. |
 
 3. **Import the CSV file to create the certificate stores**
 
