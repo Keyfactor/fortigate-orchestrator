@@ -49,8 +49,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
         private static readonly string get_certificate_api = "/api/v2/cmdb/certificate/local/";
 
-        private static readonly string update_certificate_api = "/api/v2/cmdb/certificate/local/";
-
         //api/v2/cmdb/vpn.certificate/local/test?vdom=root
         private static readonly string delete_certificate_api = "/api/v2/cmdb/vpn.certificate/local/";
 
@@ -84,7 +82,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
-                DeleteResource(delete_certificate_api + alias);
+                DeleteResource(delete_certificate_api, new Dictionary<string, string> { { "mkey", alias }, { "vdom", VDOM == null ? "root" : VDOM } } );
             }
             catch (Exception ex)
             {
@@ -109,7 +107,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             var endpoint = "/api/v2/cmdb/" + path + "/" + name;
 
             var parameters = new Dictionary<String, String>();
-            parameters.Add("vdom", "root");
+            parameters.Add("vdom", VDOM == null ? "root" : VDOM);
 
             try
             {
@@ -131,7 +129,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
-            parameters.Add("vdom", "root");
+            parameters.Add("vdom", VDOM == null ? "root" : VDOM);
             parameters.Add("scope", "global");
             parameters.Add("mkey", alias);
             parameters.Add("qtypes", $"[{qtype.ToString()}]");
@@ -276,7 +274,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 Dictionary<String, String> parameters = new Dictionary<string, string>();
                 if (!string.IsNullOrEmpty(mkey))
                     parameters.Add("mkey", mkey);
-                if (VDOM != null))
+                if (VDOM != null)
                     parameters.Add("vdom", VDOM);
                 var result = GetResource(endpoint, parameters);
                 certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
