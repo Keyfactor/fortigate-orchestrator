@@ -285,6 +285,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                     parameters.Add("mkey", mkey);
                 if (VDOM != null)
                     parameters.Add("vdom", VDOM);
+                else
+                    parameters.Add("scope", "global");
                 var result = GetResource(endpoint, parameters);
                 certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
             }
