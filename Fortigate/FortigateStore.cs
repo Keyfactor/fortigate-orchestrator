@@ -71,7 +71,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             FortigateHost = fortigateHost;
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
             VDOM = vdom;
-            Scope = vdom.Equals("root", StringComparison.OrdinalIgnoreCase) ? "global" : "vdom";
+            Scope = vdom == null || vdom.Equals("root", StringComparison.OrdinalIgnoreCase) ? "global" : "vdom";
 
             logger.MethodExit(LogLevel.Debug);
         }
@@ -80,9 +80,14 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         {
             logger.MethodEntry(LogLevel.Debug);
 
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            if (VDOM == null)
+                parameters.Add("scope", "global");
+            else
+                parameters.Add("vdom", VDOM);
             try
             {
-                DeleteResource(delete_certificate_api, new Dictionary<string, string> { { "mkey", alias }, { "vdom", VDOM == null ? "root" : VDOM } } );
+                DeleteResource(delete_certificate_api + alias, parameters);
             }
             catch (Exception ex)
             {
@@ -107,7 +112,10 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             var endpoint = "/api/v2/cmdb/" + path + "/" + name;
 
             var parameters = new Dictionary<String, String>();
-            parameters.Add("vdom", VDOM == null ? "root" : VDOM);
+            if (VDOM == null)
+                parameters.Add("scope", "global");
+            else
+                parameters.Add("vdom", VDOM);
 
             try
             {
@@ -129,8 +137,10 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
-            parameters.Add("vdom", VDOM == null ? "root" : VDOM);
-            parameters.Add("scope", "global");
+            if (VDOM == null)
+                parameters.Add("scope", "global");
+            else
+                parameters.Add("vdom", VDOM);
             parameters.Add("mkey", alias);
             parameters.Add("qtypes", $"[{qtype.ToString()}]");
 
@@ -241,16 +251,15 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 key_file_content = privateKey,
                 file_content = cert,
                 scope = VDOM == null ? "global" : "vdom",
+                vdom = VDOM,
                 type = "regular"
             };
             if (VDOM != null)
                 cert_resource.vdom = VDOM;
 
-            var parameters = new Dictionary<String, String>();
-            parameters.Add("vdom", "root");
             try
             {
-                PostAsJson(import_certificate_api, cert_resource, parameters);
+                PostAsJson(import_certificate_api, cert_resource);
             }
             catch (Exception ex)
             {
@@ -325,12 +334,12 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
         }
 
-        private String PostAsJson(string endpoint, cmdb_certificate_resource obj, Dictionary<String, String> additionalParams = null)
+        private String PostAsJson(string endpoint, cmdb_certificate_resource obj)
         {
             logger.MethodEntry(LogLevel.Debug);
 
             string content = "";
-            var url = GetUrl(endpoint, additionalParams);
+            var url = GetUrl(endpoint);
             var stringContent = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
             stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
