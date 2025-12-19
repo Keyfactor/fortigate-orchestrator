@@ -251,7 +251,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 key_file_content = privateKey,
                 file_content = cert,
                 scope = VDOM == null ? "global" : "vdom",
-                vdom = VDOM,
                 type = "regular"
             };
             if (VDOM != null)
