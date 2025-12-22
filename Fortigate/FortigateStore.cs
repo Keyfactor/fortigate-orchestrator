@@ -69,7 +69,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             client = new HttpClient(handler);
             FortigateHost = fortigateHost;
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
-            VDOM = vdom;
+            VDOM = string.IsNullOrEmpty(vdom) ? "root" : vdom;
 
             logger.MethodExit(LogLevel.Debug);
         }
