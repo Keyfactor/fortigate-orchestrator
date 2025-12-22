@@ -55,6 +55,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
+                store.ValidateVDOMScope(config.JobCertificate.Alias);
+
                 //Management jobs, unlike Discovery, Inventory, and Reenrollment jobs can have 3 different purposes:
                 switch (config.OperationType)
                 {

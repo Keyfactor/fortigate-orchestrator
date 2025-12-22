@@ -37,7 +37,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         private ILogger logger { get; set; }
         private string FortigateHost { get; set; }
         private string VDOM {  get; set; }
-        private string Scope { get; set; }
 
 
         private static readonly string available_certificates = "/api/v2/monitor/system/available-certificates";
@@ -71,7 +70,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             FortigateHost = fortigateHost;
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
             VDOM = vdom;
-            Scope = vdom == null || vdom.Equals("root", StringComparison.OrdinalIgnoreCase) ? "global" : "vdom";
 
             logger.MethodExit(LogLevel.Debug);
         }
@@ -80,11 +78,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         {
             logger.MethodEntry(LogLevel.Debug);
 
-            Dictionary<string, string> parameters = new Dictionary<string, string>();
-            if (VDOM == null)
-                parameters.Add("scope", "global");
-            else
-                parameters.Add("vdom", VDOM);
+            Dictionary<string, string> parameters = new Dictionary<string, string> { { "scope", "vdom" } };
             try
             {
                 DeleteResource(delete_certificate_api + alias, parameters);
@@ -111,11 +105,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             var endpoint = "/api/v2/cmdb/" + path + "/" + name;
 
-            var parameters = new Dictionary<String, String>();
-            if (VDOM == null)
-                parameters.Add("scope", "global");
-            else
-                parameters.Add("vdom", VDOM);
+            var parameters = new Dictionary<String, String> { { "vdom", VDOM } };
 
             try
             {
@@ -137,10 +127,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.MethodEntry(LogLevel.Debug);
 
             var parameters = new Dictionary<String, String>();
-            if (VDOM == null)
-                parameters.Add("scope", "global");
-            else
-                parameters.Add("vdom", VDOM);
+            parameters.Add("vdom", VDOM);
             parameters.Add("mkey", alias);
             parameters.Add("qtypes", $"[{qtype.ToString()}]");
 
@@ -250,11 +237,10 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 certname = alias,
                 key_file_content = privateKey,
                 file_content = cert,
-                scope = VDOM == null ? "global" : "vdom",
+                scope = "vdom",
+                vdom = VDOM,
                 type = "regular"
             };
-            if (VDOM != null)
-                cert_resource.vdom = VDOM;
 
             try
             {
@@ -282,10 +268,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
                 Dictionary<String, String> parameters = new Dictionary<string, string>();
                 if (!string.IsNullOrEmpty(mkey))
                     parameters.Add("mkey", mkey);
-                if (VDOM != null)
-                    parameters.Add("vdom", VDOM);
-                else
-                    parameters.Add("scope", "global");
+                parameters.Add("vdom", VDOM);
                 var result = GetResource(endpoint, parameters);
                 certificates = JsonConvert.DeserializeObject<FortigateResponse<Certificate[]>>(result).results;
             }
@@ -312,8 +295,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             var parameters = new Dictionary<String, String>();
             parameters.Add("mkey", mkey);
             parameters.Add("type", type);
-            if (VDOM != null)
-                parameters.Add("vdom", VDOM);
+            parameters.Add("vdom", VDOM);
 
             try
             {
@@ -328,6 +310,21 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             {
                 logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error retrieving downloading file {mkey}: "));
                 throw;
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        public void ValidateVDOMScope(string alias)
+        {
+            logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                if (List(alias)[0].range.ToLower() == "global")
+                    throw new Exception($"Certificate {alias} is scoped as global.  Global certificates cannot be replaced or deleted by this integration.");
             }
             finally
             {

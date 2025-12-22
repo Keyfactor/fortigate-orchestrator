@@ -16,7 +16,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
                 dynamic propertiesJSON = JsonConvert.DeserializeObject(properties);
 
-                VDOM = propertiesJSON.VDOM == null || string.IsNullOrEmpty(propertiesJSON.VDOM.Value) ? null : propertiesJSON.VDOM.Value;
+                VDOM = propertiesJSON.VDOM == null || string.IsNullOrEmpty(propertiesJSON.VDOM.Value) ? "root" : propertiesJSON.VDOM.Value;
             }
         }
     }
