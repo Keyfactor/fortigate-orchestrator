@@ -173,7 +173,7 @@ the Keyfactor Command Portal
 
 1. **Download the latest Fortigate Universal Orchestrator extension from GitHub.**
 
-    Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine the asset should be downloaded. Then, click the corresponding asset to download the zip archive.
 
    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `fortigate-orchestrator` .NET version to download |
    | --------- | ----------- | ----------- | ----------- |
