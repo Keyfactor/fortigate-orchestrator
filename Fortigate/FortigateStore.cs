@@ -47,6 +47,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         private static readonly string import_certificate_api = "/api/v2/monitor/vpn-certificate/local/import";
 
         private static readonly string get_certificate_api = "/api/v2/cmdb/certificate/local/";
+        private static readonly string get_vdom_api = "/api/v2/cmdb/system/vdom/";
 
         //api/v2/cmdb/vpn.certificate/local/test?vdom=root
         private static readonly string delete_certificate_api = "/api/v2/cmdb/vpn.certificate/local/";
@@ -71,6 +72,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {accessToken}");
             VDOM = string.IsNullOrEmpty(vdom) ? "root" : vdom;
 
+            ValidateVDOM();
+
             logger.MethodExit(LogLevel.Debug);
         }
 
@@ -78,7 +81,8 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         {
             logger.MethodEntry(LogLevel.Debug);
 
-            Dictionary<string, string> parameters = new Dictionary<string, string> { { "scope", "vdom" } };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("vdom", VDOM);
             try
             {
                 DeleteResource(delete_certificate_api + alias, parameters);
@@ -288,33 +292,36 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             return certificates;
         }
 
-        public string DownloadFileAsString(string mkey, string type)
+        public string DownloadFileAsString(string mkey, string type, out bool isError)
         {
             logger.MethodEntry(LogLevel.Debug);
 
+            isError = false;
             var parameters = new Dictionary<String, String>();
             parameters.Add("mkey", mkey);
             parameters.Add("type", type);
             parameters.Add("vdom", VDOM);
 
+            string content = string.Empty;
+
             try
             {
                 var response = client.GetAsync(GetUrl(download_certificate, parameters)).GetAwaiter().GetResult();
-                var content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                content = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (!response.IsSuccessStatusCode)
                     throw new Exception($"Error retrieving certificate {mkey}: {content}");
-
-                return content;
             }
             catch (Exception ex)
             {
                 logger.LogError(FortigateException.FlattenExceptionMessages(ex, $"Error retrieving downloading file {mkey}: "));
-                throw;
+                isError = true;
             }
             finally
             {
                 logger.MethodExit(LogLevel.Debug);
             }
+
+            return content;
         }
 
         public void ValidateVDOMScope(string alias)
@@ -323,8 +330,27 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
             try
             {
-                if (List(alias)[0].range.ToLower() == "global")
+                Certificate[] certs = List(alias);
+                if (certs.Length > 0 && certs[0].range.ToLower() == "global")
                     throw new Exception($"Certificate {alias} is scoped as global.  Global certificates cannot be replaced or deleted by this integration.");
+            }
+            finally
+            {
+                logger.MethodExit(LogLevel.Debug);
+            }
+        }
+
+        private void ValidateVDOM()
+        {
+            logger.MethodEntry(LogLevel.Debug);
+
+            try
+            {
+                var response = client.GetAsync(GetUrl(get_vdom_api + VDOM, null)).GetAwaiter().GetResult();
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    throw new FortigateException($"VDOM {VDOM} not found.");
+                if (!response.IsSuccessStatusCode)
+                    throw new FortigateException($"Error retrieving VDOM {VDOM}.  Status={response.StatusCode.ToString()}, Error={response.Content} {response.ReasonPhrase}");
             }
             finally
             {
@@ -336,7 +362,6 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
         {
             logger.MethodEntry(LogLevel.Debug);
 
-            string content = "";
             var url = GetUrl(endpoint);
             var stringContent = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
             stringContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
@@ -344,7 +369,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             try
             {
                 HttpResponseMessage responseMessage = client.PostAsync(url, stringContent).GetAwaiter().GetResult();
-                content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var content = responseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
                 if (!responseMessage.IsSuccessStatusCode)
                     throw new Exception($"Error adding certificate {obj.certname}: {content}");
 

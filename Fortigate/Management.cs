@@ -49,10 +49,10 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             logger.LogDebug($"Client Machine: {config.CertificateStoreDetails.ClientMachine}");
             logger.LogDebug($"Store Path: {config.CertificateStoreDetails.StorePath}");
 
-            FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword), config.CertificateStoreDetails.StorePath);
-
             try
             {
+                FortigateStore store = new FortigateStore(config.CertificateStoreDetails.ClientMachine, PAMUtilities.ResolvePAMField(_resolver, logger, "Fortigate Access Key", config.CertificateStoreDetails.StorePassword), config.CertificateStoreDetails.StorePath);
+
                 store.ValidateVDOMScope(config.JobCertificate.Alias);
 
                 //Management jobs, unlike Discovery, Inventory, and Reenrollment jobs can have 3 different purposes:
@@ -77,7 +77,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
             }
             catch (Exception ex)
             {
-                logger.LogError($"Exception for {config.Capability}: {FortigateException.FlattenExceptionMessages(ex, string.Empty)} for job id {config.JobId}");
+                logger.LogError($"Exception for {config.Capability}: {FortigateException.FlattenExceptionMessages(ex, string.Empty)} for job id {config.JobId} ");
                 return new JobResult() { Result = OrchestratorJobStatusJobResult.Failure, JobHistoryId = config.JobHistoryId, FailureMessage = FortigateException.FlattenExceptionMessages(ex, $"Site {config.CertificateStoreDetails.ClientMachine}:") };
             }
 
