@@ -233,7 +233,7 @@ the Keyfactor Command Portal
    | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The IP address or DNS of the Fortigate server |
-   | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
+   | Store Path | Value must contain the VDOM this certificate store will be managing.  `root` must be entered to manage the default 'root' VDOM. |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
@@ -259,7 +259,7 @@ the Keyfactor Command Portal
    | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The IP address or DNS of the Fortigate server |
-   | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
+   | Store Path | Value must contain the VDOM this certificate store will be managing.  `root` must be entered to manage the default 'root' VDOM. |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
