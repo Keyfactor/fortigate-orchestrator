@@ -45,6 +45,9 @@ The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 5. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation" use case)
 
 \* Because the Fortigate API does not allow for updating certificates in place, and to avoid temporary outages, when replacing local certificates that are bound, it is necessary to create a new name (alias) for the certificate.  The new name is created using the first 8 characters of the previous name (larger names truncated due to Fortigate name length constraints) allong with a suffix comprised of "--" and a 15 character hash of the current date/time.  The replaced certificate with the old name is then removed from the Fortigate instance.  For example, a bound certificate with the name "CertName" would be replaced and the name would then be "CertName--8DD76A97A98E4C1".  The existing bindings would remain in place with the new name.  At no point during the management job would any of the bound objects be left without a valid certificate binding.
+Currently, the ability to renew bound certificates is limited to these binding types:
+- The HTTPS server certificate found under Global, System => Settings
+- The VPN server certificate found under Root, VPN => SSL-VPN Settings
 
 
 
@@ -170,7 +173,7 @@ the Keyfactor Command Portal
 
 1. **Download the latest Fortigate Universal Orchestrator extension from GitHub.**
 
-    Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine the asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
 
    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `fortigate-orchestrator` .NET version to download |
    | --------- | ----------- | ----------- | ----------- |

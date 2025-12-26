@@ -1,5 +1,8 @@
-v1.3.0
+v1.4.0
 - Add ability to manage custom VDOMs.  PLEASE NOTE this release contains a breaking change.  Store Path MUST contain the value for the VDOM the certificate will be managing.  `root` must be entered to manage the default 'root' VDOM.
+
+v1.3.0
+- Add support for renewing certificate bound to the HTTPS server
 
 v1.2.0
 - Allow for the management (renew/replace) of bound certificates
