@@ -29,5 +29,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate.Api
         public string file_content { get; set; }
 
         public string scope { get; set; }
+
+        public string vdom {  get; set; }
     }
 }
