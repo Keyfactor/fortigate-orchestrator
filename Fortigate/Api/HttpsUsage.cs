@@ -11,25 +11,26 @@
 //See the License for the specific language governing permissions and
 //limitations under the License.
 
+using Newtonsoft.Json;
+using System.Text.Json.Serialization;
+
 namespace Keyfactor.Extensions.Orchestrator.Fortigate.Api
 {
-    public class cmdb_certificate_resource
+    public class HttpsUsage
     {
-        public string type { get; set; }
+        [JsonProperty("admin-server-cert")]
+        public string AdminServerCert { get; set; }
+    }
 
-        public string certname { get; set; }
+    public class HttpUsageRequest
+    {
+        [JsonProperty("admin-server-cert")]
+        public OriginKey AdminServerCert { get; set; }
+    }
 
-        //< pass phrase used to encrypt key>
-        //public string password { get; set; }
-
-        //<base64-encoded certificate, without line breaks>
-        public string key_file_content { get; set; }
-
-        //<base64-encoded certificate, without line breaks>
-        public string file_content { get; set; }
-
-        public string scope { get; set; }
-
-        public string vdom {  get; set; }
+    public class OriginKey
+    {
+        [JsonProperty("q_origin_key")]
+        public string QOriginKey { get; set; }
     }
 }
