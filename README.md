@@ -31,17 +31,18 @@
 
 ## Overview
 
-The Fortigate Orchestrator Extension supports the following use cases:
-1. Inventory of local user and factory cerificates
-2. Ability to add new local certificates
-3. Ability to replace bound* and unbound local user certificates (usually after renewal in Keyfactor Command)
-4. Ability to delete **unbound** local user certificates
+The Fortigate Orchestrator Extension supports the following use cases against a specified VDOM:
+1. Inventory of local user and factory VDOM and globally scoped cerificates
+2. Ability to add new local VDOM scoped certificates
+3. Ability to replace bound* and unbound local user VDOM scoped certificates
+4. Ability to delete **unbound** local user VDOM scoped certificates
 
 The Fortigate Orchestrator Extension DOES NOT support the following use cases:
 1. The renewal or removal of certificates enrolled through the internal Fortigate CA
 2. The renewal or removal of factory certificates
 3. The removal of ANY certificate bound to a Fortigate object
-4. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation" use case)
+4. The renewal/replacement of any globally scoped certificate.
+5. Certificate enrollment using the internal Fortigate CA (Keyfactor's "reenrollment" or "on device key generation" use case)
 
 \* Because the Fortigate API does not allow for updating certificates in place, and to avoid temporary outages, when replacing local certificates that are bound, it is necessary to create a new name (alias) for the certificate.  The new name is created using the first 8 characters of the previous name (larger names truncated due to Fortigate name length constraints) allong with a suffix comprised of "--" and a 15 character hash of the current date/time.  The replaced certificate with the old name is then removed from the Fortigate instance.  For example, a bound certificate with the name "CertName" would be replaced and the name would then be "CertName--8DD76A97A98E4C1".  The existing bindings would remain in place with the new name.  At no point during the management job would any of the bound objects be left without a valid certificate binding.
 Currently, the ability to renew bound certificates is limited to these binding types:
@@ -172,15 +173,13 @@ the Keyfactor Command Portal
 
 1. **Download the latest Fortigate Universal Orchestrator extension from GitHub.**
 
-    Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine whether the `net6.0` or `net8.0` asset should be downloaded. Then, click the corresponding asset to download the zip archive.
+    Navigate to the [Fortigate Universal Orchestrator extension GitHub version page](https://github.com/Keyfactor/fortigate-orchestrator/releases/latest). Refer to the compatibility matrix below to determine the asset should be downloaded. Then, click the corresponding asset to download the zip archive.
 
    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `fortigate-orchestrator` .NET version to download |
    | --------- | ----------- | ----------- | ----------- |
    | Older than `11.0.0` | | | `net6.0` |
-   | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` |
-   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Disable` | `net6.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | `Disable` | `net6.0` |
    | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` |
-   | `11.6` _and_ newer | `net8.0` | | `net8.0` |
 
     Unzip the archive containing extension assemblies to a known location.
 
@@ -237,7 +236,7 @@ the Keyfactor Command Portal
    | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The IP address or DNS of the Fortigate server |
-   | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
+        | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
@@ -263,7 +262,7 @@ the Keyfactor Command Portal
    | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The IP address or DNS of the Fortigate server |
-   | Store Path | This is not used in this integration, but is a required field in the UI. Just enter any value here |
+        | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
