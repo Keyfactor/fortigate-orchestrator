@@ -178,8 +178,9 @@ the Keyfactor Command Portal
    | Universal Orchestrator Version | Latest .NET version installed on the Universal Orchestrator server | `rollForward` condition in `Orchestrator.runtimeconfig.json` | `fortigate-orchestrator` .NET version to download |
    | --------- | ----------- | ----------- | ----------- |
    | Older than `11.0.0` | | | `net6.0` |
-   | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | `Disable` | `net6.0` |
-   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net6.0` | | `net6.0` |
+   | Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `Disable` | `net6.0` || Between `11.0.0` and `11.5.1` (inclusive) | `net8.0` | `LatestMajor` | `net8.0` |
+   | `11.6` _and_ newer | `net8.0` | | `net8.0` | 
 
     Unzip the archive containing extension assemblies to a known location.
 
@@ -236,7 +237,7 @@ the Keyfactor Command Portal
    | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The IP address or DNS of the Fortigate server |
-        | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
+   | Store Path | Value must contain the VDOM this certificate store will be managing.  `root` must be entered to manage the default 'root' VDOM. |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
@@ -262,7 +263,7 @@ the Keyfactor Command Portal
    | Category | Select "Fortigate" or the customized certificate store name from the previous step. |
    | Container | Optional container to associate certificate store with. |
    | Client Machine | The IP address or DNS of the Fortigate server |
-        | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
+   | Store Path | Value must contain the VDOM this certificate store will be managing.  `root` must be entered to manage the default 'root' VDOM. |
    | Store Password | Enter the Fortigate API Token here |
    | Orchestrator | Select an approved orchestrator capable of managing `Fortigate` certificates. Specifically, one with the `Fortigate` capability. |
 
