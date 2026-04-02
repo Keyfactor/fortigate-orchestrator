@@ -4,7 +4,7 @@
     "name": "Fortigate",
     "status": "production",
     "description": "This integration is used to inventory and manage certificates in Fortigate.",
-    "link_github": false,
+    "link_github": true,
     "support_level": "community",
     "update_catalog": false,
     "release_project": "Fortigate/Fortigate.csproj",
