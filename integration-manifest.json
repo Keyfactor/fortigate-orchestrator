@@ -6,7 +6,7 @@
     "description": "This integration is used to inventory and manage certificates in Fortigate.",
     "link_github": true,
     "support_level": "community",
-    "update_catalog": false,
+    "update_catalog": true,
     "release_project": "Fortigate/Fortigate.csproj",
     "release_dir": "Fortigate/bin/Release",
     "about": {
