@@ -53,7 +53,7 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
                 foreach (var cert in certificates)
                 {
-                    if (cert.type == "local-cer")
+                    if (cert.type == "local-cer") 
                     {
                         var certFile = store.DownloadFileAsString(cert.name, cert.type, out isError);
                         if (isError)
