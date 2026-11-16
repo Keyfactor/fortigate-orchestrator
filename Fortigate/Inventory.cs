@@ -53,21 +53,26 @@ namespace Keyfactor.Extensions.Orchestrator.Fortigate
 
                 foreach (var cert in certificates)
                 {
-                    if (cert.type == "local-cer")
+                    if (cert.type == "local-cer") 
                     {
                         var certFile = store.DownloadFileAsString(cert.name, cert.type, out isError);
-                        if (isError) atLeastOneError = true;
-
-                        var item = new CurrentInventoryItem()
+                        if (isError)
                         {
-                            Alias = cert.name,
-                            Certificates = new string[] { certFile },
-                            ItemStatus = OrchestratorInventoryItemStatus.Unknown,
-                            PrivateKeyEntry = true,
-                            UseChainLevel = false
-                        };
+                            atLeastOneError = true;
+                        }
+                        else
+                        {
+                            var item = new CurrentInventoryItem()
+                            {
+                                Alias = cert.name,
+                                Certificates = new string[] { certFile },
+                                ItemStatus = OrchestratorInventoryItemStatus.Unknown,
+                                PrivateKeyEntry = true,
+                                UseChainLevel = false
+                            };
 
-                        inventoryItems.Add(item);
+                            inventoryItems.Add(item);
+                        }
                     }
                 }
             }
